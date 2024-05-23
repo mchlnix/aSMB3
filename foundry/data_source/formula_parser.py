@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Callable
 
 from foundry.data_source import OPERATORS
 
@@ -101,6 +102,8 @@ def _is_function_params_end(char: str):
 
 
 class FormulaParser:
+    LOGGING = False
+
     def __init__(self, line: str):
         self._line = line
 
@@ -124,46 +127,34 @@ class FormulaParser:
         self.tree = Leaf("", _LeafType.ROOT)
         self._current_leaf = self.tree
 
+        self._state_func_lut: dict[_ParseState, Callable[[str], None]] = {
+            _ParseState.NEUTRAL: self._do_neutral,
+            _ParseState.SYMBOL: self._do_symbol,
+            _ParseState.NUMERAL: self._do_numeral,
+            _ParseState.BINARY: self._do_binary,
+            _ParseState.DECIMAL: self._do_decimal,
+            _ParseState.HEXADECIMAL: self._do_hexadecimal,
+            _ParseState.FUNCTION_PARAMS: self._do_function_params,
+            _ParseState.PARENS: self._do_parens,
+            _ParseState.OPERATOR: self._do_operator,
+            _ParseState.COMMENT: self._do_comment,
+        }
+
     def parse(self):
         self._current_char_index = 0
 
         while self._line and self._state != _ParseState.END:
             char = self._line[0]
 
-            # print(f"Checking '{char}', {self._state}, {self._current_leaf}")
+            if self.LOGGING:
+                print(f"Checking '{char}', {self._state}, {self._current_leaf}")
 
-            if self._state == _ParseState.NEUTRAL:
-                self._do_neutral(char)
-
-            elif self._state == _ParseState.SYMBOL:
-                self._do_symbol(char)
-
-            elif self._state == _ParseState.NUMERAL:
-                self._do_numeral(char)
-
-            elif self._state == _ParseState.BINARY:
-                self._do_binary(char)
-
-            elif self._state == _ParseState.DECIMAL:
-                self._do_decimal(char)
-
-            elif self._state == _ParseState.HEXADECIMAL:
-                self._do_hexadecimal(char)
-
-            elif self._state == _ParseState.FUNCTION_PARAMS:
-                self._do_function_params(char)
-
-            elif self._state == _ParseState.PARENS:
-                self._do_parens(char)
-
-            elif self._state == _ParseState.OPERATOR:
-                self._do_operator(char)
-
-            elif self._state == _ParseState.COMMENT:
-                self._do_comment(char)
-
-            else:
+            if self._state not in self._state_func_lut:
                 raise ValueError(f"No state matching for '{char}' / '{self._state.name}'")
+
+            state_func = self._state_func_lut[self._state]
+
+            state_func(char)
 
         if self._state == _ParseState.SYMBOL:
             self._end_symbol()
