@@ -264,6 +264,8 @@ class AssemblyParser:
 
             self._prg_pass_2(prg_file)
 
+            assert self._current_byte_offset == 0x2000
+
     def _parse_smb3_asm(self):
         self._line_co = 0
 
