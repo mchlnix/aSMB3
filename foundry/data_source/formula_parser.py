@@ -21,6 +21,8 @@ class _ParseState(Enum):
 
     OPERATOR = 8
 
+    MACRO_PARAM = 9
+
     COMMENT = 50
     END = 99
 
@@ -35,6 +37,7 @@ class _LeafType(Enum):
     FUNCTION_PARAMS = 6
     OPERATOR = 7
     LISTING = 8
+    MACRO_PARAM = 9
 
 
 @dataclass
@@ -55,6 +58,10 @@ _OPERATOR_NUMERAL_OVERLAY = set(OPERATORS).intersection(_NUMERAL_START_CHARS)
 
 def _is_operator(char: str):
     return char in OPERATORS or char in "<>"
+
+
+def _is_macro_param_start(char: str):
+    return char == "\\"
 
 
 def _is_numeral_start(char: str):
@@ -137,6 +144,7 @@ class FormulaParser:
             _ParseState.FUNCTION_PARAMS: self._do_function_params,
             _ParseState.PARENS: self._do_parens,
             _ParseState.OPERATOR: self._do_operator,
+            _ParseState.MACRO_PARAM: self._do_macro_param,
             _ParseState.COMMENT: self._do_comment,
         }
 
@@ -184,7 +192,7 @@ class FormulaParser:
 
             while leaf.leaf_type != _LeafType.ROOT:
                 if leaf.leaf_type == _LeafType.FUNCTION_PARAMS:
-                    # finished function params, so go back to parent of it's function name
+                    # finished function params, so go back to the parent of its function name
                     assert leaf.parent and leaf.parent.parent
                     new_current_leaf = leaf.parent.parent
 
@@ -213,11 +221,15 @@ class FormulaParser:
         elif _is_operator(char):
             self._state = _ParseState.OPERATOR
 
+        elif _is_macro_param_start(char):
+            self._state = _ParseState.MACRO_PARAM
+
         elif char.isspace():
             self._skip()
 
         elif char == ",":
             self._maybe_insert_parent(_LeafType.LISTING)
+            self._skip()
 
         else:
             raise ValueError(f"Not sure what to do with '{char}'")
@@ -243,7 +255,27 @@ class FormulaParser:
 
             self._current_leaf = new_leaf
 
-        self._skip()
+    def _do_macro_param(self, char: str):
+        # expecting 1-9
+        if self._current_leaf.leaf_type == _LeafType.MACRO_PARAM:
+            assert char.isnumeric() and char != "0", char
+
+            self._take()
+
+            self._end_macro_param()
+
+        else:
+            assert _is_macro_param_start(char)
+            self._new_leaf(Leaf("", _LeafType.MACRO_PARAM))
+
+            self._take()
+
+    def _end_macro_param(self):
+        self._save_buffer(self._symbols)
+        assert self._current_leaf.parent
+        self._current_leaf = self._current_leaf.parent
+
+        self._state = _ParseState.NEUTRAL
 
     def _do_symbol(self, char: str):
         if not _is_symbol_char(char):
@@ -256,8 +288,6 @@ class FormulaParser:
             self._take()
 
     def _end_symbol(self, char=""):
-        self._current_leaf.value = self._current_buffer
-
         if _is_open_parens(char):
             self._current_leaf.leaf_type = _LeafType.FUNCTION_NAME
             self._save_buffer(self._function_names)
@@ -269,6 +299,9 @@ class FormulaParser:
         self._state = _ParseState.NEUTRAL
 
     def _do_operator(self, char: str):
+        if self._current_leaf.leaf_type != _LeafType.OPERATOR:
+            self._maybe_insert_parent(_LeafType.FORMULA)
+
         if self._current_leaf.leaf_type != _LeafType.OPERATOR:
             leaf = Leaf("", _LeafType.OPERATOR)
             self._new_leaf(leaf)
@@ -296,7 +329,6 @@ class FormulaParser:
     def _end_operator(self):
         self._save_buffer(self._operators)
 
-        self._current_leaf.value = self._current_buffer
         assert self._current_leaf.parent
         self._current_leaf = self._current_leaf.parent
 
@@ -423,6 +455,27 @@ class FormulaParser:
     @_current_buffer.setter
     def _current_buffer(self, value):
         self._current_leaf.value = value
+
+    @property
+    def has_symbols(self):
+        return self._has_type(_LeafType.SYMBOL)
+
+    @property
+    def has_macro_params(self):
+        return self._has_type(_LeafType.MACRO_PARAM)
+
+    def _has_type(self, leaf_type: _LeafType):
+        leaves = self.tree.leaves.copy()
+
+        while leaves:
+            leaf = leaves.pop(0)
+
+            if leaf.leaf_type == leaf_type:
+                return True
+
+            leaves.extend(leaf.leaves)
+        else:
+            return False
 
     @property
     def _last_part_was_operator(self):
