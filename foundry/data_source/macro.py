@@ -13,6 +13,9 @@ class Macro:
         expanded_lines = []
 
         for line in self.lines:
+            if not line:
+                continue
+
             for arg_no, arg in enumerate(args, 1):
                 line = line.replace(f"\\{arg_no}", arg)
 

@@ -217,29 +217,27 @@ class FormulaParser:
             self._skip()
 
         elif char == ",":
-            self._insert_listing(char)
+            self._maybe_insert_parent(_LeafType.LISTING)
 
         else:
             raise ValueError(f"Not sure what to do with '{char}'")
 
-    def _insert_listing(self, _char: str):
-        assert self._state == _ParseState.NEUTRAL
-
+    def _maybe_insert_parent(self, leaf_type: _LeafType):
         last_leaf = self._current_leaf.leaves[-1]
 
-        if self._current_leaf.leaf_type != _LeafType.LISTING:
-            # replace last leaf at parent with new listing leaf
+        if self._current_leaf.leaf_type != leaf_type:
+            # replace last leaf at parent with new leaf
             assert last_leaf.parent
             assert last_leaf.parent.leaves.pop() == last_leaf
 
-            if self._current_leaf.leaves and self._current_leaf.leaves[-1].leaf_type == _LeafType.LISTING:
+            if self._current_leaf.leaves and self._current_leaf.leaves[-1].leaf_type == leaf_type:
                 new_leaf = self._current_leaf.leaves[-1]
             else:
-                new_leaf = Leaf("", _LeafType.LISTING)
+                new_leaf = Leaf("", leaf_type)
                 new_leaf.parent = self._current_leaf
                 last_leaf.parent.leaves.append(new_leaf)
 
-            # replace parent at last leave with new listing leaf
+            # replace parent at last leave with new leaf
             new_leaf.leaves.append(last_leaf)
             last_leaf.parent = new_leaf
 
@@ -275,17 +273,19 @@ class FormulaParser:
             leaf = Leaf("", _LeafType.OPERATOR)
             self._new_leaf(leaf)
 
-        if char not in "<>" and self._last_part_was_operator:
+        # ends single character operators
+        if self._last_part_was_operator:
             self._end_operator()
 
+        # matches single character operators and the shift operators
         elif self._current_buffer + char in OPERATORS:
             self._take()
 
-        elif char.isspace():
-            self._skip()
-
         elif self._current_buffer in OPERATORS:
             self._end_operator()
+
+        elif char.isspace():
+            self._skip()
 
         elif not self._current_buffer and char == ">":
             self._take()

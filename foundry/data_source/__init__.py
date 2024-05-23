@@ -23,6 +23,9 @@ OPERATORS = "+,-,*,/,%,^,&,|,~,<<,>>".split(",")
 COMPARATORS = "=,!=,!,<,>,<=,>=".split(",")
 
 
+BUILT_IN_FUNCTIONS = ["HIGH", "LOW", "BANK", "PAGE", "SIZEOF"]
+
+
 DIRECTIVES = [
     ".LIST",
     ".NOLIST",

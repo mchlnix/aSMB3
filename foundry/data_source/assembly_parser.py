@@ -3,6 +3,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 from foundry.data_source import (
+    BUILT_IN_FUNCTIONS,
     COMPARATORS,
     DIRECTIVES,
     FUNCTIONS,
@@ -263,8 +264,6 @@ class AssemblyParser:
 
             self._prg_pass_2(prg_file)
 
-            break
-
     def _parse_smb3_asm(self):
         self._line_co = 0
 
@@ -309,6 +308,22 @@ class AssemblyParser:
 
             elif _is_ines_directive(line):
                 self._handle_ines_directive(lines, smb3_asm)
+
+            elif _is_byte(line):
+                if line.startswith(".byte"):
+                    continue
+
+                symbol_name = line.split(".byte")[0].replace(":", "").strip()
+
+                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+
+            elif _is_word(line):
+                if line.startswith(".word"):
+                    continue
+
+                symbol_name = line.split(".word")[0].replace(":", "").strip()
+
+                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
 
             elif self._try_bank_directive(lines):
                 pass
@@ -437,6 +452,22 @@ class AssemblyParser:
 
                 self._ram_lut[ram_var] = AsmPosition(prg_file, self._line_co, 0)
 
+            elif _is_byte(line):
+                line = _strip_comment(line)
+
+                if not line.startswith(".byte"):
+                    symbol_name = line.split(".byte")[0].replace(":", "").strip()
+
+                    self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+
+            elif _is_word(line):
+                line = _strip_comment(line)
+
+                if not line.startswith(".word"):
+                    symbol_name = line.split(".word")[0].replace(":", "").strip()
+
+                    self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+
             elif Macro.macro_on_line(line):
                 macro = Macro.parse_macro(lines, AsmPosition(prg_file, self._line_co, 0))
 
@@ -516,6 +547,7 @@ class AssemblyParser:
     def _prg_pass_2(self, prg_file):
         print(f"Pass 2 of {prg_file}")
         self._line_co = 0
+        self._current_byte_offset = 0
 
         with prg_file.open() as f:
             lines = f.readlines()
@@ -568,7 +600,17 @@ class AssemblyParser:
 
                 self._current_byte_offset += byte_co
 
-            elif macro_name := self._is_macro(line):
+            elif Macro.macro_on_line(line):
+                self._print_line("Macro Start", lines.pop(0).strip())
+
+                while ".endm" not in lines[0]:
+                    self._line_co += 1
+                    self._print_line("Macro Define", lines.pop(0).strip())
+
+                self._line_co += 1
+                self._print_line("Macro End", lines.pop(0).strip())
+
+            elif macro_name := self._is_macro_invoke(line):
                 self._print_line("Macro Invoke", lines.pop(0).strip())
 
                 self._count_macro(line, macro_name)
@@ -591,7 +633,7 @@ class AssemblyParser:
                 if _strip_comment(line) != "org $D800":  # known bad line. ignore
                     raise ValueError(f"What was that? PRG {prg_file.name}")
 
-        assert line_count == self._line_co
+        assert line_count == self._line_co, (line_count, self._line_co, prg_file)
 
     def _count_macro(self, line, macro_name):
         macro = self._macro_lut[macro_name]
@@ -604,7 +646,7 @@ class AssemblyParser:
         for expanded_line in expanded_lines:
             self._print_line("Macro Expand", expanded_line)
 
-            if inner_macro_name := self._is_macro(expanded_line):
+            if inner_macro_name := self._is_macro_invoke(expanded_line):
                 self._count_macro(expanded_line, inner_macro_name)
 
                 continue
@@ -622,7 +664,10 @@ class AssemblyParser:
             else:
                 self._current_byte_offset += self._count_instruction(expanded_line)
 
-    def _is_macro(self, line):
+    def _is_macro_invoke(self, line):
+        if ".macro" in line:
+            return ""
+
         line = _strip_comment(line).split(" ")
 
         if line[0] in self._macro_lut:
@@ -648,12 +693,15 @@ class AssemblyParser:
         fp.parse()
 
         byte_parts: list[str] = fp.parts
-        print(str(fp.parts))
+        print(fp.parts)
 
         skip_next_one = False
         count = 0
 
         for byte_part in byte_parts:
+            if byte_part in OPERATORS:
+                continue
+
             if skip_next_one:
                 skip_next_one = False
                 continue
@@ -681,8 +729,8 @@ class AssemblyParser:
 
                 count += 1
 
-            elif byte_part in self._func_lut:
-                print("Found Function")
+            elif byte_part in self._func_lut or byte_part in BUILT_IN_FUNCTIONS:
+                print(f"Found Function {byte_part}")
                 # TODO expand function for accurate size
                 count += 0
 
