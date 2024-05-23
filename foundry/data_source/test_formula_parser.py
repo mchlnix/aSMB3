@@ -93,3 +93,17 @@ def test_paren_formula_in_listing():
         "])"
         "])"
     ), fp.debug_str_tree()
+
+
+def test_shift_left():
+    fp = FormulaParser("($FF & $FF00) >> 8")
+    fp.parse()
+
+    assert fp.parts == ["$FF", "&", "$FF00", ">>", "8"], fp.parts
+    assert fp.debug_str_tree() == (
+        "('', ROOT, l=["
+        "('()', PARENS, l=["
+        "('$FF', NUMBER, l=[]), ('&', OPERATOR, l=[]), ('$FF00', NUMBER, l=[])"
+        "]), ('>>', OPERATOR, l=[]), ('8', NUMBER, l=[])"
+        "])"
+    ), fp.debug_str_tree()
