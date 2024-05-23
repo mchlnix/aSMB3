@@ -1,8 +1,8 @@
 from PySide6.QtCore import QPoint, QPointF, QRectF, QSizeF
 from PySide6.QtGui import QBrush, QPainter, QPen, QPolygonF, Qt
 
+from foundry.data_source.rom import ROM
 from foundry.game import GROUND
-from foundry.game.File import ROM
 from foundry.game.gfx.drawable.Block import Block
 from foundry.game.level.Level import Level
 from smb3parse.constants import Constants

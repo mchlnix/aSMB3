@@ -6,7 +6,7 @@ from PySide6.QtGui import QPixmap
 
 from approval_tests.gui import ApprovalDialog
 from foundry import root_dir
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.level.Level import Level
 from foundry.gui.FoundryMainWindow import FoundryMainWindow
 from smb3parse.objects.object_set import PLAINS_OBJECT_SET

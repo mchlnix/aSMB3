@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from smb3parse.levels import WORLD_COUNT
 from smb3parse.util.parser import FoundLevel, gen_levels_in_rom
 

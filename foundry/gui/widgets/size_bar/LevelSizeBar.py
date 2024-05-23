@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.level.LevelRef import LevelRef
 
 from .size_bar import SizeBar

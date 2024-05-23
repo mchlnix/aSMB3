@@ -6,7 +6,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QDialog, QMenu, QMessageBox
 
 from foundry import icon
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.gfx.objects import LevelObject
 from foundry.game.level.LevelRef import LevelRef
 from foundry.gui.dialogs.GamePropertiesDialog import GamePropertiesDialog

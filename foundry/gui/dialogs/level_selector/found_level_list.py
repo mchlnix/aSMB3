@@ -3,7 +3,7 @@ from PySide6.QtGui import QMouseEvent, Qt
 from PySide6.QtWidgets import QLabel, QTableWidgetItem, QVBoxLayout, QWidget
 
 from foundry import get_level_thumbnail, pixmap_to_base64
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.gui.widgets.table_widget import TableWidget
 from smb3parse.objects.object_set import OBJECT_SET_NAMES
 from smb3parse.util.parser import FoundLevel

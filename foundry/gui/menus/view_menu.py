@@ -2,7 +2,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMenu
 
 from foundry import IMG_FILE_FILTER, icon
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 
 
 class ViewMenu(QMenu):

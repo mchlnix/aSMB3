@@ -6,8 +6,8 @@ from PySide6.QtGui import QMouseEvent, Qt, QUndoStack, QWheelEvent
 from PySide6.QtWidgets import QScrollArea, QToolTip, QWidget
 
 from foundry import ctrl_is_pressed, make_macro
+from foundry.data_source.rom import ROM
 from foundry.game import EXPANDS_BOTH, EXPANDS_HORIZ, EXPANDS_VERT
-from foundry.game.File import ROM
 from foundry.game.gfx.drawable.Block import get_tile
 from foundry.game.gfx.objects import EnemyItem, LevelObject
 from foundry.game.gfx.objects.in_level.in_level_object import InLevelObject

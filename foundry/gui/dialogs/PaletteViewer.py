@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.gfx import change_color
 from foundry.game.gfx.Palette import (
     COLORS_PER_PALETTE,

@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.ObjectDefinitions import ObjectDefinition, load_object_definitions
 from smb3parse.objects.object_set import ENEMY_ITEM_OBJECT_SET
 from smb3parse.objects.object_set import ObjectSet as SMB3ObjectSet

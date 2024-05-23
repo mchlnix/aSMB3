@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from foundry import icon
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.gui import OBJECT_SET_ITEMS
 from foundry.gui.widgets.Spinner import Spinner
 from smb3parse.data_points import LevelPointerData

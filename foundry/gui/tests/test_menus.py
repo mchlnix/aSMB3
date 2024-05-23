@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QFileDialog
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 
 test_data_dir = Path(__file__).parent.parent.joinpath("test_data")
 test_m3l_path = test_data_dir.joinpath("test.m3l")

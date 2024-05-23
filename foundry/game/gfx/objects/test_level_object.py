@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from foundry.conftest import compare_images, test_rom_path
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.gfx.objects import (
     LevelObject,
     LevelObjectFactory,

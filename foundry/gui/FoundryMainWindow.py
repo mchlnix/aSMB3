@@ -40,9 +40,9 @@ from foundry import (
     icon,
     make_macro,
 )
+from foundry.data_source.rom import ROM
 from foundry.features.instaplay import CantFindFirstTile, InstaPlayer, LevelNotAttached
 from foundry.game.additional_data import LevelOrganizer
-from foundry.game.File import ROM
 from foundry.game.gfx import restore_all_palettes
 from foundry.game.gfx.objects import EnemyItem, Jump, LevelObject
 from foundry.game.gfx.objects.in_level.in_level_object import InLevelObject

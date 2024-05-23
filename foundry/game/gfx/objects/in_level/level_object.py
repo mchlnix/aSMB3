@@ -3,8 +3,8 @@ from warnings import warn
 from PySide6.QtCore import QRect, QSize
 from PySide6.QtGui import QImage, QPainter
 
+from foundry.data_source.rom import ROM
 from foundry.game import EXPANDS_BOTH, EXPANDS_HORIZ, EXPANDS_NOT, EXPANDS_VERT, GROUND
-from foundry.game.File import ROM
 from foundry.game.gfx.drawable.Block import Block, get_block
 from foundry.game.gfx.GraphicsSet import GraphicsSet
 from foundry.game.gfx.objects.in_level.in_level_object import InLevelObject

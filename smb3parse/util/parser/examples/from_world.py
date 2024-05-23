@@ -2,7 +2,7 @@ import pathlib
 
 from PySide6.QtWidgets import QApplication
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from smb3parse.data_points import Position
 from smb3parse.util.parser.cpu import NesCPU
 from smb3parse.util.parser.examples.canvas import Canvas

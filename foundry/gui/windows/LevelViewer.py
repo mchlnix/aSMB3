@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from foundry import get_level_thumbnail, pixmap_to_base64
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.gui.windows.CustomChildWindow import CustomChildWindow
 from smb3parse.constants import BASE_OFFSET, Constants
 from smb3parse.data_points import WorldMapData

@@ -2,8 +2,8 @@ from typing import Optional, cast
 
 from PySide6.QtCore import QObject, QPoint, QRect, QSize, Signal, SignalInstance
 
+from foundry.data_source.rom import ROM
 from foundry.game.additional_data import LEVEL_DATA_DELIMITER_COUNT, LevelOrganizer
-from foundry.game.File import ROM
 from foundry.game.gfx.objects import (
     EnemyItem,
     EnemyItemFactory,

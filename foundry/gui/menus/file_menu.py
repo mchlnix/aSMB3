@@ -4,7 +4,7 @@ from PySide6.QtGui import QAction, QCursor, QGuiApplication, Qt
 from PySide6.QtWidgets import QMenu, QMessageBox
 
 from foundry import NO_PARENT, icon
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.level.LevelRef import LevelRef
 from foundry.gui.asm import (
     load_asm_filename,

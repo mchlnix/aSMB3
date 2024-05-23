@@ -4,7 +4,7 @@ from PySide6.QtCore import Signal, SignalInstance
 from PySide6.QtGui import QDropEvent, QUndoStack
 from PySide6.QtWidgets import QTableWidgetItem
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.level.LevelRef import LevelRef
 from foundry.gui.widgets.Spinner import Spinner
 from scribe.gui.commands import (

@@ -5,7 +5,7 @@ from typing import Optional
 from PySide6.QtGui import QColor
 
 from foundry import root_dir
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.gui.util import grouper
 from smb3parse.constants import Constants
 from smb3parse.levels import BASE_OFFSET

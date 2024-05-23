@@ -14,7 +14,7 @@ from foundry import (
     open_url,
     releases_link,
 )
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.level.LevelRef import LevelRef
 from foundry.gui.util import center_widget
 

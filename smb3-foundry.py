@@ -9,7 +9,7 @@ import warnings
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from foundry import auto_save_rom_path, github_issue_link
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.gui.dialogs.AutoSaveDialog import AutoSaveDialog
 
 LOAD_LEVEL = "--load-level"

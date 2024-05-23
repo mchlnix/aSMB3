@@ -2,7 +2,7 @@ import tempfile
 
 import pytest
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from smb3parse.util.parser import FoundLevel
 
 

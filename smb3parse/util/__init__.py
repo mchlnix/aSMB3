@@ -14,6 +14,7 @@ STY_RAM = 0x84  # STY $ll
 
 
 hex_int = partial(int, base=16)
+bin_int = partial(int, base=2)
 
 
 def little_endian(two_bytes: bytearray) -> int:

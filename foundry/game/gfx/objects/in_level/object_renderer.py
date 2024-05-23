@@ -3,8 +3,8 @@ from warnings import warn
 
 from PySide6.QtCore import QRect
 
+from foundry.data_source.rom import ROM
 from foundry.game import GROUND, SKY
-from foundry.game.File import ROM
 from foundry.game.ObjectDefinitions import EndType, GeneratorType
 from smb3parse.levels import LEVEL_SCREEN_HEIGHT, LEVEL_SCREEN_WIDTH
 from smb3parse.objects.object_set import PLAINS_OBJECT_SET

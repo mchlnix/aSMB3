@@ -3,8 +3,8 @@ from itertools import product
 from PySide6.QtCore import QPoint, QRect
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, Qt
 
+from foundry.data_source.rom import ROM
 from foundry.game import EXPANDS_BOTH, EXPANDS_HORIZ, EXPANDS_VERT, GROUND
-from foundry.game.File import ROM
 from foundry.game.gfx.drawable import load_from_png, make_image_selected, mario_actions
 from foundry.game.gfx.drawable.Block import Block
 from foundry.game.gfx.GraphicsSet import GraphicsSet

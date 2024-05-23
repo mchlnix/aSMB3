@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Optional
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QUndoCommand
 
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.game.gfx import change_color
 from foundry.game.gfx.objects import EnemyItem, Jump, LevelObject
 from foundry.game.gfx.objects.in_level.in_level_object import InLevelObject

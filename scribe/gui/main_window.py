@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from foundry import ROM_FILE_FILTER, icon
-from foundry.game.File import ROM
+from foundry.data_source.rom import ROM
 from foundry.gui.MainWindow import MainWindow
 from foundry.gui.settings import Settings
 from foundry.gui.visualization.world.WorldView import WorldView
