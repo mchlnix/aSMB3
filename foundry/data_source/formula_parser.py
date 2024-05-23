@@ -130,7 +130,7 @@ class FormulaParser:
         while self._line and self._state != _ParseState.END:
             char = self._line[0]
 
-            print(f"Checking '{char}', {self._state}, {self._current_leaf}")
+            # print(f"Checking '{char}', {self._state}, {self._current_leaf}")
 
             if self._state == _ParseState.NEUTRAL:
                 self._do_neutral(char)
@@ -445,87 +445,3 @@ class FormulaParser:
 
     def _debug_str_leaf(self, leaf: Leaf):
         return f"('{leaf.value}', {leaf.leaf_type.name}, l=[{', '.join(map(self._debug_str_leaf, leaf.leaves))}])"
-
-
-fp = FormulaParser("OAT_BOUNDBOX01 | OAT_FIREIMMUNITY | OAT_HITNOTKILL")
-fp.parse()
-
-assert fp.parts == ["OAT_BOUNDBOX01", "|", "OAT_FIREIMMUNITY", "|", "OAT_HITNOTKILL"], fp.parts
-assert fp.debug_str_tree() == (
-    "('', ROOT, l=["
-    "('OAT_BOUNDBOX01', SYMBOL, l=[]), ('|', OPERATOR, l=[]), ('OAT_FIREIMMUNITY', SYMBOL, l=[]), "
-    "('|', OPERATOR, l=[]), ('OAT_HITNOTKILL', SYMBOL, l=[])"
-    "])"
-), fp.debug_str_tree()
-
-
-fp = FormulaParser("2,   4,   2,   8	; 0")
-fp.parse()
-
-assert fp.parts == ["2", "4", "2", "8"], fp.parts
-assert fp.debug_str_tree() == (
-    (
-        "('', ROOT, l=["
-        "('', LISTING, l=[('2', NUMBER, l=[]), ('4', NUMBER, l=[]), ('2', NUMBER, l=[]), ('8', NUMBER, l=[])])"
-        "])"
-    )
-), fp.debug_str_tree()
-
-
-fp = FormulaParser("MLEN(DMC01, DMC01_End)")
-fp.parse()
-
-assert fp.parts == ["MLEN", "DMC01", "DMC01_End"], fp.parts
-assert fp.debug_str_tree() == (
-    "('', ROOT, l=["
-    "('MLEN', FUNCTION_NAME, l=["
-    "('()', FUNCTION_PARAMS, l=["
-    "('', LISTING, l=[('DMC01', SYMBOL, l=[]), ('DMC01_End', SYMBOL, l=[])])"
-    "])"
-    "])"
-    "])"
-), fp.debug_str_tree()
-
-fp = FormulaParser("$00, -$03,  $03,  $00,  $00,  $00,  $00,  $00 ; $00-$07")
-fp.parse()
-
-assert fp.parts == "$00, -$03, $03, $00, $00, $00, $00, $00".split(", "), fp.parts
-assert fp.debug_str_tree() == (
-    "('', ROOT, l=[('', LISTING, l=["
-    "('$00', NUMBER, l=[]), ('-$03', NUMBER, l=[]), ('$03', NUMBER, l=[]), ('$00', NUMBER, l=[]), "
-    "('$00', NUMBER, l=[]), ('$00', NUMBER, l=[]), ('$00', NUMBER, l=[]), ('$00', NUMBER, l=[])"
-    "])])"
-), fp.debug_str_tree()
-
-fp = FormulaParser("-$01, $01")
-fp.parse()
-
-assert fp.parts == "-$01, $01".split(", "), fp.parts
-assert (
-    fp.debug_str_tree() == "('', ROOT, l=[('', LISTING, l=[" "('-$01', NUMBER, l=[]), ('$01', NUMBER, l=[])" "])])"
-), fp.debug_str_tree()
-
-fp = FormulaParser("0, (LL_LargeBGClouds2B - LL_LargeBGClouds2)")
-fp.parse()
-
-assert fp.parts == ["0", "LL_LargeBGClouds2B", "-", "LL_LargeBGClouds2"], fp.parts
-assert fp.debug_str_tree() == (
-    "('', ROOT, l=["
-    "('', LISTING, l=["
-    "('0', NUMBER, l=[]), ('()', PARENS, l=["
-    "('LL_LargeBGClouds2B', SYMBOL, l=[]), ('-', OPERATOR, l=[]), ('LL_LargeBGClouds2', SYMBOL, l=[])"
-    "])"
-    "])"
-    "])"
-), fp.debug_str_tree()
-
-
-fp = FormulaParser("(TimeBonus_Score - 1)")
-fp.parse()
-
-assert fp.parts == ["TimeBonus_Score", "-", "1"], fp.parts
-assert fp.debug_str_tree() == (
-    "('', ROOT, l=["
-    "('()', PARENS, l=[('TimeBonus_Score', SYMBOL, l=[]), ('-', OPERATOR, l=[]), ('1', NUMBER, l=[])])"
-    "])"
-), fp.debug_str_tree()
