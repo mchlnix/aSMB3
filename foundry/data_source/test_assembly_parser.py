@@ -24,7 +24,7 @@ def macro_example():
 
 @pytest.fixture
 def asm_position():
-    return AsmPosition(Path(), 0, 0)
+    return AsmPosition(Path(), 0)
 
 
 @pytest.fixture
