@@ -661,9 +661,25 @@ class AssemblyParser:
 
     def _count_include_bytes(self, path: Path):
         with path.open() as f:
-            lines = filter(lambda line: _is_byte(line) or _is_word(line), f.readlines())
+            lines = f.readlines()
 
-        return sum(self._count_bytes_or_words(line) for line in lines)
+        count = 0
+
+        for line in lines:
+            if _is_byte(line) or _is_word(line):
+                count += self._count_bytes_or_words(line)
+
+            elif _is_include_directive(line):
+                _, new_path = map(str.strip, strip_comment(line).split(".include"))
+                new_path = new_path.replace('"', "").strip()
+
+                if not new_path.endswith(".asm"):
+                    new_path += ".asm"
+
+                assert (self._root_dir / new_path).is_file(), self._root_dir / new_path
+                count += self._count_include_bytes(self._root_dir / new_path)
+
+        return count
 
     def _count_macro(self, line, macro_name):
         macro = self._macro_lut[macro_name]
