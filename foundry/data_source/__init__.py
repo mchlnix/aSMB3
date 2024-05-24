@@ -39,6 +39,10 @@ def byte_length_of_number_string(value):
         raise ValueError(f"Unexpected {value}")
 
 
+BYTE_DIRECTIVE = ".byte"
+WORD_DIRECTIVE = ".word"
+
+
 OPERATORS = "+,-,*,/,%,^,&,|,~,<<,>>".split(",")
 
 
