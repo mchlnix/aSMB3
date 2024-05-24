@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable
 
-from foundry.data_source import OPERATORS
+from foundry.data_source import OPERATORS, byte_length_of_number_string
 
 
 class _ParseState(Enum):
@@ -27,7 +27,7 @@ class _ParseState(Enum):
     END = 99
 
 
-class _LeafType(Enum):
+class LeafType(Enum):
     ROOT = 0
     FUNCTION_NAME = 1
     SYMBOL = 2
@@ -43,7 +43,7 @@ class _LeafType(Enum):
 @dataclass
 class Leaf:
     value: str
-    leaf_type: _LeafType
+    leaf_type: LeafType
 
     parent: "Leaf | None" = None
     leaves: list["Leaf"] = field(default_factory=list)
@@ -131,7 +131,7 @@ class FormulaParser:
         Makes more sense this way. There is probably a better name for this condition than pinning it on the comma.
         """
 
-        self.tree = Leaf("", _LeafType.ROOT)
+        self.tree = Leaf("", LeafType.ROOT)
         self._current_leaf = self.tree
 
         self._state_func_lut: dict[_ParseState, Callable[[str], None]] = {
@@ -181,7 +181,7 @@ class FormulaParser:
             self._state = _ParseState.NUMERAL
 
         elif _is_open_parens(char):
-            if self._current_leaf.leaf_type == _LeafType.FUNCTION_NAME:
+            if self._current_leaf.leaf_type == LeafType.FUNCTION_NAME:
                 self._state = _ParseState.FUNCTION_PARAMS
 
             else:
@@ -190,15 +190,15 @@ class FormulaParser:
         elif _is_close_parens(char):
             leaf = self._current_leaf
 
-            while leaf.leaf_type != _LeafType.ROOT:
-                if leaf.leaf_type == _LeafType.FUNCTION_PARAMS:
+            while leaf.leaf_type != LeafType.ROOT:
+                if leaf.leaf_type == LeafType.FUNCTION_PARAMS:
                     # finished function params, so go back to the parent of its function name
                     assert leaf.parent and leaf.parent.parent
                     new_current_leaf = leaf.parent.parent
 
                     break
 
-                elif leaf.leaf_type == _LeafType.PARENS:
+                elif leaf.leaf_type == LeafType.PARENS:
                     # close the parenthesis around whatever this was, probably a calculation
                     assert leaf.parent
                     new_current_leaf = leaf.parent
@@ -228,36 +228,58 @@ class FormulaParser:
             self._skip()
 
         elif char == ",":
-            self._maybe_insert_parent(_LeafType.LISTING)
+            self._maybe_insert_parent(LeafType.LISTING)
             self._skip()
 
         else:
             raise ValueError(f"Not sure what to do with '{char}'")
 
-    def _maybe_insert_parent(self, leaf_type: _LeafType):
-        last_leaf = self._current_leaf.leaves[-1]
+    def _maybe_insert_parent(self, leaf_type: LeafType):
+        # 1./2. already inside what we want to insert
+        if self._current_leaf.leaf_type == leaf_type:
+            return
 
-        if self._current_leaf.leaf_type != leaf_type:
-            # replace last leaf at parent with new leaf
-            assert last_leaf.parent
-            assert last_leaf.parent.leaves.pop() == last_leaf
+        # 3. after a formula, suddenly a listing
+        if leaf_type == LeafType.LISTING and self._current_leaf.leaf_type == LeafType.FORMULA:
+            cur_leaf = self._current_leaf
+            assert cur_leaf.parent
 
-            if self._current_leaf.leaves and self._current_leaf.leaves[-1].leaf_type == leaf_type:
-                new_leaf = self._current_leaf.leaves[-1]
-            else:
-                new_leaf = Leaf("", leaf_type)
-                new_leaf.parent = self._current_leaf
-                last_leaf.parent.leaves.append(new_leaf)
+            if cur_leaf.parent.leaf_type == LeafType.LISTING:
+                # formula is already in a listing
+                self._current_leaf = cur_leaf.parent
+                return
 
-            # replace parent at last leave with new leaf
-            new_leaf.leaves.append(last_leaf)
-            last_leaf.parent = new_leaf
+        # 4. we can't be in a listing and want to make a formula its parent, because listings cannot be inside formulas,
+        #    so take the last child of the listing instead, because it is the first operand of the formula
+        # 5. nothing to consider, just insert new parent between current leaf and last child
+        else:
+            assert self._current_leaf.leaves
+            cur_leaf = self._current_leaf.leaves[-1]
 
-            self._current_leaf = new_leaf
+        self._insert_parent(cur_leaf, leaf_type)
+
+    def _insert_parent(self, cur_leaf, leaf_type):
+        old_parent = cur_leaf.parent
+        new_parent = Leaf("", leaf_type)
+
+        assert old_parent.leaves[-1] is cur_leaf
+
+        # establish parent as old parents child
+        new_parent.parent = old_parent
+        old_parent.leaves.append(new_parent)
+
+        # give current leaf from old parent to new parent
+        old_parent.leaves.remove(cur_leaf)
+
+        cur_leaf.parent = new_parent
+        new_parent.leaves.append(cur_leaf)
+
+        # set new current leaf
+        self._current_leaf = new_parent
 
     def _do_macro_param(self, char: str):
         # expecting 1-9
-        if self._current_leaf.leaf_type == _LeafType.MACRO_PARAM:
+        if self._current_leaf.leaf_type == LeafType.MACRO_PARAM:
             assert char.isnumeric() and char != "0", char
 
             self._take()
@@ -266,7 +288,7 @@ class FormulaParser:
 
         else:
             assert _is_macro_param_start(char)
-            self._new_leaf(Leaf("", _LeafType.MACRO_PARAM))
+            self._new_leaf(Leaf("", LeafType.MACRO_PARAM))
 
             self._take()
 
@@ -282,14 +304,14 @@ class FormulaParser:
             self._end_symbol(char)
 
         else:
-            if self._current_leaf.leaf_type != _LeafType.SYMBOL:
-                self._new_leaf(Leaf("", _LeafType.SYMBOL))
+            if self._current_leaf.leaf_type != LeafType.SYMBOL:
+                self._new_leaf(Leaf("", LeafType.SYMBOL))
 
             self._take()
 
     def _end_symbol(self, char=""):
         if _is_open_parens(char):
-            self._current_leaf.leaf_type = _LeafType.FUNCTION_NAME
+            self._current_leaf.leaf_type = LeafType.FUNCTION_NAME
             self._save_buffer(self._function_names)
         else:
             self._save_buffer(self._symbols)
@@ -299,11 +321,11 @@ class FormulaParser:
         self._state = _ParseState.NEUTRAL
 
     def _do_operator(self, char: str):
-        if self._current_leaf.leaf_type != _LeafType.OPERATOR:
-            self._maybe_insert_parent(_LeafType.FORMULA)
+        if self._current_leaf.leaf_type != LeafType.OPERATOR:
+            self._maybe_insert_parent(LeafType.FORMULA)
 
-        if self._current_leaf.leaf_type != _LeafType.OPERATOR:
-            leaf = Leaf("", _LeafType.OPERATOR)
+        if self._current_leaf.leaf_type != LeafType.OPERATOR:
+            leaf = Leaf("", LeafType.OPERATOR)
             self._new_leaf(leaf)
 
         # ends single character operators
@@ -361,14 +383,14 @@ class FormulaParser:
             self._state = _ParseState.NEUTRAL
 
     def _do_function_params(self, _char: str):
-        self._new_leaf(Leaf("()", _LeafType.FUNCTION_PARAMS))
+        self._new_leaf(Leaf("()", LeafType.FUNCTION_PARAMS))
 
         self._skip()
 
         self._state = _ParseState.NEUTRAL
 
     def _do_parens(self, _char: str):
-        self._new_leaf(Leaf("()", _LeafType.PARENS))
+        self._new_leaf(Leaf("()", LeafType.PARENS))
 
         self._skip()
 
@@ -376,7 +398,7 @@ class FormulaParser:
 
     def _do_binary(self, char: str):
         if _is_binary_start(char):
-            if self._current_leaf.leaf_type == _LeafType.NUMBER:
+            if self._current_leaf.leaf_type == LeafType.NUMBER:
                 raise ValueError("Starting a binary number, while already doing that.")
             else:
                 self._take()
@@ -387,7 +409,7 @@ class FormulaParser:
             self._take()
 
     def _do_decimal(self, char: str):
-        if self._current_leaf.leaf_type != _LeafType.NUMBER:
+        if self._current_leaf.leaf_type != LeafType.NUMBER:
             self._new_number_leaf()
 
         if _is_decimal_char(char):
@@ -400,7 +422,7 @@ class FormulaParser:
             if self._current_buffer and _is_hexadecimal_start(self._current_buffer[-1]):
                 raise ValueError("Starting a hexadecimal number, while already doing that.")
 
-            elif self._current_leaf.leaf_type != _LeafType.NUMBER:
+            elif self._current_leaf.leaf_type != LeafType.NUMBER:
                 self._new_number_leaf()
 
             self._take()
@@ -411,7 +433,7 @@ class FormulaParser:
             self._take()
 
     def _new_number_leaf(self):
-        new_leaf = Leaf("", _LeafType.NUMBER)
+        new_leaf = Leaf("", LeafType.NUMBER)
         self._new_leaf(new_leaf)
 
     def _end_number(self):
@@ -458,22 +480,50 @@ class FormulaParser:
 
     @property
     def has_symbols(self):
-        return self._has_type(_LeafType.SYMBOL)
+        return self._has_type(LeafType.SYMBOL)
 
     @property
     def has_macro_params(self):
-        return self._has_type(_LeafType.MACRO_PARAM)
+        return self._has_type(LeafType.MACRO_PARAM)
 
     def fill_in_symbols(self, symbols: dict[str, str]):
         for leaf in self._depth_first_tree_walk():
-            if leaf.leaf_type != _LeafType.SYMBOL:
+            if leaf.leaf_type != LeafType.SYMBOL:
                 continue
 
             if leaf.value not in symbols:
                 continue
 
-            leaf.leaf_type = _LeafType.NUMBER
+            leaf.leaf_type = LeafType.NUMBER
             leaf.value = symbols[leaf.value]
+
+    @staticmethod
+    def _count_leaf_byte_size(leaf: Leaf):
+        if leaf.leaf_type in (LeafType.ROOT, LeafType.FUNCTION_NAME, LeafType.PARENS, LeafType.FUNCTION_PARAMS):
+            assert len(leaf.leaves) == 1
+            return FormulaParser._count_leaf_byte_size(leaf.leaves[0])
+
+        if leaf.leaf_type == LeafType.SYMBOL:
+            raise ValueError(f"Couldn't determine byte size of Symbol '{leaf.value}'.")
+
+        if leaf.leaf_type == LeafType.NUMBER:
+            assert not leaf.leaves
+            return byte_length_of_number_string(leaf.value)
+
+        if leaf.leaf_type == LeafType.FORMULA:
+            assert len(leaf.leaves) >= 2
+            return max(FormulaParser._count_leaf_byte_size(leaf) for leaf in leaf.leaves)
+
+        if leaf.leaf_type == LeafType.OPERATOR:
+            assert not leaf.leaves
+            return 0
+
+        if leaf.leaf_type == LeafType.LISTING:
+            assert len(leaf.leaves) >= 2
+            return sum(FormulaParser._count_leaf_byte_size(leaf) for leaf in leaf.leaves)
+
+        if leaf.leaf_type == LeafType.MACRO_PARAM:
+            raise ValueError(f"Couldn't determine byte size of Macro Param '{leaf.value}'.")
 
     def _depth_first_tree_walk(self):
         leaves = self.tree.leaves.copy()
@@ -485,7 +535,7 @@ class FormulaParser:
 
             leaves.extend(leaf.leaves)
 
-    def _has_type(self, leaf_type: _LeafType):
+    def _has_type(self, leaf_type: LeafType):
         for leaf in self._depth_first_tree_walk():
             if leaf.leaf_type == leaf_type:
                 return True
