@@ -1,6 +1,6 @@
 import re
 
-from foundry.data_source import AsmPosition, _strip_comment
+from foundry.data_source import AsmPosition, strip_comment
 
 
 class Macro:
@@ -27,14 +27,14 @@ class Macro:
     def parse_macro(lines: list[str], asm_position: AsmPosition):
         lines = lines.copy()
 
-        line = _strip_comment(lines.pop(0))
+        line = strip_comment(lines.pop(0))
         name = Macro.macro_on_line(line)
 
         macro = Macro(name, asm_position)
         macro.lines.append(line)
 
         while lines:
-            line = _strip_comment(lines.pop(0))
+            line = strip_comment(lines.pop(0))
             macro.lines.append(line)
 
             if ".endm" in line:
