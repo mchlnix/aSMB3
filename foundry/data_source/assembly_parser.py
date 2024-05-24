@@ -16,7 +16,7 @@ from foundry.data_source import (
 )
 from foundry.data_source.formula_parser import FormulaParser, LeafType
 from foundry.data_source.macro import Macro
-from smb3parse.util import bin_int, hex_int
+from smb3parse.util import apply, bin_int, hex_int
 
 os.chdir("/home/michael/Gits/smb3")
 
@@ -640,6 +640,14 @@ class AssemblyParser:
 
             elif _is_symbol_definition(line):
                 self._print_line("Symbol Define", lines.pop(0).strip())
+
+                parts = apply(str.strip, strip_comment(line).split(":"))
+
+                # symbols can have instructions following them
+                if len(parts) > 1 and _is_instruction(parts[1]):
+                    byte_co = self._count_instruction(parts[1])
+
+                    self._current_byte_offset += byte_co
 
             else:
                 self._print_line("Ignoring", lines.pop(0).strip())
