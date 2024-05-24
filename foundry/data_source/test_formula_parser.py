@@ -97,6 +97,26 @@ def test_paren_formula():
     assert not fp.has_macro_params
 
 
+def test_long_formula():
+    fp = FormulaParser("TimeBonus_Score - 1 + 2")
+    fp.parse()
+
+    assert fp.parts == ["TimeBonus_Score", "-", "1", "+", "2"], fp.parts
+    assert fp.debug_str_tree() == (
+        "('', ROOT, l=["
+        "('', FORMULA, l=["
+        "('TimeBonus_Score', SYMBOL, l=[]), "
+        "('-', OPERATOR, l=[]), "
+        "('1', NUMBER, l=[]), "
+        "('+', OPERATOR, l=[]), "
+        "('2', NUMBER, l=[])"
+        "])"
+        "])"
+    ), fp.debug_str_tree()
+    assert fp.has_symbols
+    assert not fp.has_macro_params
+
+
 def test_paren_formula_in_listing():
     fp = FormulaParser("0, (LL_LargeBGClouds2B - LL_LargeBGClouds2)")
     fp.parse()
@@ -115,6 +135,41 @@ def test_paren_formula_in_listing():
     ), fp.debug_str_tree()
     assert fp.has_symbols
     assert not fp.has_macro_params
+
+    assert fp.debug_str_tree() == (
+        "('', ROOT, l=["
+        "('', LISTING, l=["
+        "('0', NUMBER, l=[]), ('()', PARENS, l=["
+        "('', FORMULA, l=["
+        "('LL_LargeBGClouds2B', SYMBOL, l=[]), ('-', OPERATOR, l=[]), ('LL_LargeBGClouds2', SYMBOL, l=[])"
+        "])"
+        "])"
+        "])"
+        "])"
+    ), fp.debug_str_tree()
+
+
+def test_fill_in_symbols():
+    fp = FormulaParser("0, (LL_LargeBGClouds2B - LL_LargeBGClouds2)")
+    fp.parse()
+
+    symbols = {"LL_LargeBGClouds2B": "1", "LL_LargeBGClouds2": "2"}
+
+    fp.fill_in_symbols(symbols)
+
+    assert fp.debug_str_tree() == (
+        "('', ROOT, l=["
+        "('', LISTING, l=["
+        "('0', NUMBER, l=[]), ('()', PARENS, l=["
+        "('', FORMULA, l=["
+        f"('{symbols['LL_LargeBGClouds2B']}', NUMBER, l=[]), "
+        "('-', OPERATOR, l=[]), "
+        f"('{symbols['LL_LargeBGClouds2']}', NUMBER, l=[])"
+        "])"
+        "])"
+        "])"
+        "])"
+    ), fp.debug_str_tree()
 
 
 def test_shift_left():
@@ -137,14 +192,14 @@ def test_shift_left():
 
 
 def test_macro_param():
-    fp = FormulaParser("\\1 >> 8")
+    fp = FormulaParser("\\1 >> \\2")
     fp.parse()
 
-    assert fp.parts == ["\\1", ">>", "8"], fp.parts
+    assert fp.parts == ["\\1", ">>", "\\2"], fp.parts
     assert fp.debug_str_tree() == (
         "('', ROOT, l=["
         "('', FORMULA, l=["
-        "('\\1', MACRO_PARAM, l=[]), ('>>', OPERATOR, l=[]), ('8', NUMBER, l=[])"
+        "('\\1', MACRO_PARAM, l=[]), ('>>', OPERATOR, l=[]), ('\\2', MACRO_PARAM, l=[])"
         "])"
         "])"
     ), fp.debug_str_tree()
