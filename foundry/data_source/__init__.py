@@ -7,7 +7,6 @@ from pathlib import Path
 class AsmPosition:
     file: Path
     line_no: int
-    size: int
 
 
 def strip_comment(line: str):

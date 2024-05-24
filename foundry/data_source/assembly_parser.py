@@ -299,14 +299,14 @@ class AssemblyParser:
 
                 ram_var = strip_comment(line).split(".ds")[0].replace(":", "").strip()
 
-                self._ram_lut[ram_var] = AsmPosition(smb3_asm, self._line_co, 0)
+                self._ram_lut[ram_var] = AsmPosition(smb3_asm, self._line_co)
 
             elif _is_func_directive(line):
                 line = strip_comment(line)
 
                 func_name = line.split(" ")[0].strip().replace(":", "")
 
-                self._func_lut[func_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+                self._func_lut[func_name] = AsmPosition(smb3_asm_file, self._line_co)
 
                 self._print_line("Directive func", lines.pop(0).strip())
 
@@ -319,7 +319,7 @@ class AssemblyParser:
 
                 symbol_name = line.split(BYTE_DIRECTIVE)[0].replace(":", "").strip()
 
-                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co)
 
             elif _is_word(line):
                 if line.startswith(WORD_DIRECTIVE):
@@ -327,7 +327,7 @@ class AssemblyParser:
 
                 symbol_name = line.split(WORD_DIRECTIVE)[0].replace(":", "").strip()
 
-                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co)
 
             elif self._try_bank_directive(lines):
                 pass
@@ -339,7 +339,7 @@ class AssemblyParser:
                 self._print_line("Directive igno", lines.pop(0).strip())
 
             elif Macro.macro_on_line(line):
-                macro = Macro.parse_macro(lines, AsmPosition(smb3_asm_file, self._line_co, 0))
+                macro = Macro.parse_macro(lines, AsmPosition(smb3_asm_file, self._line_co))
 
                 self._macro_lut[macro.name] = macro
 
@@ -379,7 +379,7 @@ class AssemblyParser:
 
                 symbol = strip_comment(line).split(":")[0].strip()
 
-                self._symbol_lut[symbol] = AsmPosition(smb3_asm, self._line_co, 0)
+                self._symbol_lut[symbol] = AsmPosition(smb3_asm, self._line_co)
 
             else:
                 self._print_line("Ignoring", lines.pop(0).strip())
@@ -393,23 +393,23 @@ class AssemblyParser:
         if ines_directive == ".inesprg":
             self._prg_count = int(value)
 
-            self._pos_to_asm_lut[4] = AsmPosition(smb3_asm, self._line_co, 0)
+            self._pos_to_asm_lut[4] = AsmPosition(smb3_asm, self._line_co)
 
         elif ines_directive == ".ineschr":
             self._chr_count = int(value)
 
-            self._pos_to_asm_lut[5] = AsmPosition(smb3_asm, self._line_co, 0)
+            self._pos_to_asm_lut[5] = AsmPosition(smb3_asm, self._line_co)
 
         # TODO support extended mappers in byte 7
         elif ines_directive == ".inesmap":
             self._ines_mapper = int(value)
 
-            self._pos_to_asm_lut[6] = AsmPosition(smb3_asm, self._line_co, 0)
+            self._pos_to_asm_lut[6] = AsmPosition(smb3_asm, self._line_co)
 
         elif ines_directive == ".inesmir":
             self._ines_mirror = int(value)
 
-            self._pos_to_asm_lut[6.5] = AsmPosition(smb3_asm, self._line_co, 0)
+            self._pos_to_asm_lut[6.5] = AsmPosition(smb3_asm, self._line_co)
 
         self._print_line("Directive ines", lines.pop(0).strip())
 
@@ -443,7 +443,7 @@ class AssemblyParser:
                 func_name = line.split(" ")[0].strip().replace(":", "")
                 print(func_name)
 
-                self._func_lut[func_name] = AsmPosition(prg_file, self._line_co, 0)
+                self._func_lut[func_name] = AsmPosition(prg_file, self._line_co)
 
             elif _is_ds_directive(line):
                 # no byte size
@@ -451,7 +451,7 @@ class AssemblyParser:
 
                 ram_var = strip_comment(line).split(".ds")[0].replace(":", "").strip()
 
-                self._ram_lut[ram_var] = AsmPosition(prg_file, self._line_co, 0)
+                self._ram_lut[ram_var] = AsmPosition(prg_file, self._line_co)
 
             elif _is_byte(line):
                 line = strip_comment(line)
@@ -459,7 +459,7 @@ class AssemblyParser:
                 if not line.startswith(BYTE_DIRECTIVE):
                     symbol_name = line.split(BYTE_DIRECTIVE)[0].replace(":", "").strip()
 
-                    self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+                    self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co)
 
             elif _is_word(line):
                 line = strip_comment(line)
@@ -467,10 +467,10 @@ class AssemblyParser:
                 if not line.startswith(WORD_DIRECTIVE):
                     symbol_name = line.split(WORD_DIRECTIVE)[0].replace(":", "").strip()
 
-                    self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+                    self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co)
 
             elif Macro.macro_on_line(line):
-                macro = Macro.parse_macro(lines, AsmPosition(prg_file, self._line_co, 0))
+                macro = Macro.parse_macro(lines, AsmPosition(prg_file, self._line_co))
 
                 self._macro_lut[macro.name] = macro
 
@@ -518,7 +518,7 @@ class AssemblyParser:
 
                 symbol = strip_comment(line).split(":")[0].strip()
 
-                self._symbol_lut[symbol] = AsmPosition(prg_file, self._line_co, 1)
+                self._symbol_lut[symbol] = AsmPosition(prg_file, self._line_co)
 
             elif _is_const_assignment(line):
                 line = strip_comment(line)
@@ -597,7 +597,7 @@ class AssemblyParser:
 
                 func_name = line.split(" ")[0].strip()
 
-                self._func_lut[func_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
+                self._func_lut[func_name] = AsmPosition(smb3_asm_file, self._line_co)
 
                 self._print_line("Directive func", lines.pop(0).strip())
 
