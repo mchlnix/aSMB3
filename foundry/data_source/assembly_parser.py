@@ -11,7 +11,8 @@ from foundry.data_source import (
     OPERATORS,
     RELATIVE_ADDRESSING_INSTRUCTIONS,
     AsmPosition,
-    _strip_comment,
+    byte_length_of_number_string,
+    strip_comment,
 )
 from foundry.data_source.formula_parser import FormulaParser
 from foundry.data_source.macro import Macro
@@ -27,7 +28,7 @@ BYTES_PER_WORD = 2
 
 
 def _is_only_comment(line: str):
-    return bool(line and not _strip_comment(line))
+    return bool(line and not strip_comment(line))
 
 
 def _is_empty_line(line: str):
@@ -38,7 +39,7 @@ def _is_ignored_directive(line: str):
     if not _is_generic_directive(line):
         return False
 
-    directive = _strip_comment(line).split(" ")[0]
+    directive = strip_comment(line).split(" ")[0]
     return directive in [".data", ".org", ".code"]
 
 
@@ -58,7 +59,7 @@ def _is_ds_directive(line: str):
     # space before a directive is not necessary
     line = line.replace(".ds", " .ds")
 
-    name, ds, value = _strip_comment(line).split()
+    name, ds, value = strip_comment(line).split()
     return ds == ".ds"
 
 
@@ -72,7 +73,7 @@ def _is_func_directive(line: str):
 
 
 def _is_ines_directive(line: str):
-    line = _strip_comment(line)
+    line = strip_comment(line)
 
     if not line.startswith(".ines"):
         return False
@@ -83,13 +84,13 @@ def _is_ines_directive(line: str):
 
 
 def _is_include_directive(line: str):
-    line = _strip_comment(line)
+    line = strip_comment(line)
 
     return ".include" in line
 
 
 def _is_symbol_definition(line: str):
-    line = _strip_comment(line)
+    line = strip_comment(line)
 
     if ":" not in line:
         return len(line.split()) == 1
@@ -98,7 +99,7 @@ def _is_symbol_definition(line: str):
 
 
 def _is_const_assignment(line: str):
-    parts = _strip_comment(line).split("=")
+    parts = strip_comment(line).split("=")
 
     return len(parts) == 2
 
@@ -114,7 +115,7 @@ def _is_word(line: str):
 
 
 def _is_instruction(line: str):
-    line = _strip_comment(line)
+    line = strip_comment(line)
 
     instruction, *_ = line.split(" ")
 
@@ -163,7 +164,7 @@ def _parse_number(number_str: str):
 
 
 def _split_byte_word_parts(line):
-    line = _strip_comment(line)
+    line = strip_comment(line)
 
     if line.startswith((".byte", ".word")):
         symbol = None
@@ -216,8 +217,9 @@ class AssemblyParser:
         self._root_dir = path_to_assembly
 
         self._macro_lut: dict[str, Macro] = {}
-        self._const_lut: dict[str, int] = {}
+        self._const_lut: dict[str, str] = {}
         self._func_lut: dict[str, AsmPosition] = {}
+        self._incl_lut: dict[str, int] = {}
         self._ram_lut: dict[str, AsmPosition] = {}
         self._symbol_lut: dict[str, AsmPosition] = {}
 
@@ -295,12 +297,12 @@ class AssemblyParser:
                 # no byte size
                 self._print_line("Directive ds", lines.pop(0).strip())
 
-                ram_var = _strip_comment(line).split(".ds")[0].replace(":", "").strip()
+                ram_var = strip_comment(line).split(".ds")[0].replace(":", "").strip()
 
                 self._ram_lut[ram_var] = AsmPosition(smb3_asm, self._line_co, 0)
 
             elif _is_func_directive(line):
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 func_name = line.split(" ")[0].strip().replace(":", "")
 
@@ -355,30 +357,27 @@ class AssemblyParser:
                 raise ValueError("Unhandled Directive")
 
             elif _is_const_assignment(line):
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 self._print_line("Const Assign", lines.pop(0).strip())
 
                 name, value = map(str.strip, line.split("="))
 
-                if value in self._const_lut:
-                    value_int = self._const_lut[value]
+                if name in self._const_lut:
+                    raise ValueError(f"Redefinition of {name}")
 
                 elif _is_calculation(value):
                     left, right, operator = _parse_calculation(value)
                     print(left, right, operator)
 
-                    value_int = 0
+                    value = "xx"
 
-                else:
-                    value_int = _parse_number(value)
-
-                self._const_lut[name] = value_int
+                self._const_lut[name] = value
 
             elif _is_symbol_definition(line):
                 self._print_line("Symbol Define", lines.pop(0).strip())
 
-                symbol = _strip_comment(line).split(":")[0].strip()
+                symbol = strip_comment(line).split(":")[0].strip()
 
                 self._symbol_lut[symbol] = AsmPosition(smb3_asm, self._line_co, 0)
 
@@ -389,7 +388,7 @@ class AssemblyParser:
         assert line_count == self._line_co
 
     def _handle_ines_directive(self, lines, smb3_asm):
-        line = _strip_comment(lines[0])
+        line = strip_comment(lines[0])
         ines_directive, value = line.split()
         if ines_directive == ".inesprg":
             self._prg_count = int(value)
@@ -439,7 +438,7 @@ class AssemblyParser:
                 pass
 
             elif _is_func_directive(line):
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 func_name = line.split(" ")[0].strip().replace(":", "")
                 print(func_name)
@@ -450,12 +449,12 @@ class AssemblyParser:
                 # no byte size
                 self._print_line("Directive ds", line)
 
-                ram_var = _strip_comment(line).split(".ds")[0].replace(":", "").strip()
+                ram_var = strip_comment(line).split(".ds")[0].replace(":", "").strip()
 
                 self._ram_lut[ram_var] = AsmPosition(prg_file, self._line_co, 0)
 
             elif _is_byte(line):
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 if not line.startswith(".byte"):
                     symbol_name = line.split(".byte")[0].replace(":", "").strip()
@@ -463,7 +462,7 @@ class AssemblyParser:
                     self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
 
             elif _is_word(line):
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 if not line.startswith(".word"):
                     symbol_name = line.split(".word")[0].replace(":", "").strip()
@@ -488,12 +487,19 @@ class AssemblyParser:
             elif _is_include_directive(line):
                 self._print_line("Directive Incl", line)
 
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 if ":" in line:
-                    symbol = _strip_comment(line).split(":")[0].strip()
+                    symbol, path = map(str.strip, strip_comment(line).split(".include"))
+                    symbol = symbol.strip().removesuffix(":")
+                    path = path.replace('"', "").strip()
 
-                    self._symbol_lut[symbol] = AsmPosition(prg_file, self._line_co, 0)
+                    if not path.endswith(".asm"):
+                        path += ".asm"
+
+                    assert (self._root_dir / path).is_file(), self._root_dir / path
+
+                    self._incl_lut[symbol] = len((self._root_dir / path).read_bytes())
 
                 file_name = line.split(".include")[1].replace('"', "").strip()
                 absolute_name = self._root_dir / file_name
@@ -508,30 +514,30 @@ class AssemblyParser:
                 self._line_co = line_count_before
 
             elif _is_symbol_definition(line):
-                self._print_line("Symbol Define", _strip_comment(line))
+                self._print_line("Symbol Define", strip_comment(line))
 
-                symbol = _strip_comment(line).split(":")[0].strip()
+                symbol = strip_comment(line).split(":")[0].strip()
 
                 self._symbol_lut[symbol] = AsmPosition(prg_file, self._line_co, 1)
 
             elif _is_const_assignment(line):
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 self._print_line("Const Assign", line)
 
                 name, value = map(str.strip, line.split("="))
 
                 if value in self._const_lut:
-                    value_int = self._const_lut[value]
+                    raise ValueError(f"Redefinition of {name}")
 
                 elif self._is_func_call(value):
                     # todo, eval the function
-                    value_int = 0
+                    value_int = "func"
 
                 elif _is_calculation(value):
                     left, right, operator = _parse_calculation(value)
                     # todo, eval the operation
-                    value_int = 0
+                    value_int = "calc"
                     print(left, right, operator)
 
                 else:
@@ -587,7 +593,7 @@ class AssemblyParser:
                 self._print_line("Directive igno", lines.pop(0).strip())
 
             elif _is_func_directive(line):
-                line = _strip_comment(line)
+                line = strip_comment(line)
 
                 func_name = line.split(" ")[0].strip()
 
@@ -632,7 +638,7 @@ class AssemblyParser:
             else:
                 self._print_line("Ignoring", lines.pop(0).strip())
 
-                if _strip_comment(line) != "org $D800":  # known bad line. ignore
+                if strip_comment(line) != "org $D800":  # known bad line. ignore
                     raise ValueError(f"What was that? PRG {prg_file.name}")
 
         assert line_count == self._line_co, (line_count, self._line_co, prg_file)
@@ -670,7 +676,7 @@ class AssemblyParser:
         if ".macro" in line:
             return ""
 
-        line = _strip_comment(line).split(" ")
+        line = strip_comment(line).split(" ")
 
         if line[0] in self._macro_lut:
             return line[0]
@@ -678,10 +684,10 @@ class AssemblyParser:
             return ""
 
     def _count_bytes_or_words(self, line):
-        parts = _strip_comment(line).split(".byte")
+        parts = strip_comment(line).split(".byte")
 
         if len(parts) == 1:
-            parts = _strip_comment(line).split(".word")
+            parts = strip_comment(line).split(".word")
 
         _symbol, definition = parts
 
@@ -711,13 +717,9 @@ class AssemblyParser:
             if byte_part in self._const_lut:
                 print("Found const")
 
-                # TODO: save byte count directly, instead of the value in
                 value = self._const_lut[byte_part]
 
-                if value > 0xFF:
-                    count += 2
-                else:
-                    count += 1
+                count += byte_length_of_number_string(value)
 
             elif byte_part in self._symbol_lut:
                 print("Found Symbol")
@@ -725,6 +727,9 @@ class AssemblyParser:
                 asm_pos = self._symbol_lut[byte_part]
 
                 count += asm_pos.size
+
+            elif byte_part in self._incl_lut:
+                count += self._incl_lut[byte_part]
 
             elif byte_part in self._ram_lut:
                 print("Found RAM Var")
@@ -760,7 +765,7 @@ class AssemblyParser:
         return _parse_number(line)
 
     def _count_instruction(self, line: str):
-        line = _strip_comment(line)
+        line = strip_comment(line)
 
         if line.endswith(" A"):
             # explicit address of accumulator
@@ -813,7 +818,7 @@ class AssemblyParser:
             return 2
 
     def _is_func_call(self, line: str):
-        line = _strip_comment(line)
+        line = strip_comment(line)
 
         if "(" not in line or ")" not in line:
             return False
@@ -832,11 +837,11 @@ class AssemblyParser:
         if ".bank" not in lines[0]:
             return False
 
-        line = _strip_comment(lines.pop(0))
+        line = strip_comment(lines.pop(0))
         self._print_line("Bank Start", line)
         _, bank_index = line.split(" ")
 
-        while lines and (line := _strip_comment(lines.pop(0))):
+        while lines and (line := strip_comment(lines.pop(0))):
             self._line_co += 1
             if line.startswith(".org"):
                 self._print_line("Bank Def Org", line)
@@ -873,7 +878,7 @@ class AssemblyParser:
         if ".incchr" not in lines[0]:
             return False
 
-        line = _strip_comment(lines.pop(0))
+        line = strip_comment(lines.pop(0))
         print(f"Char Mem Incl  {self._line_co}: {line}")
 
         _, relative_path = line.split(" ")

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import ceil, log
 from pathlib import Path
 
 
@@ -9,7 +10,7 @@ class AsmPosition:
     size: int
 
 
-def _strip_comment(line: str):
+def strip_comment(line: str):
     semi_colon_index = line.find(";")
 
     if semi_colon_index == -1:
@@ -18,11 +19,30 @@ def _strip_comment(line: str):
     return line[:semi_colon_index].strip()
 
 
+def byte_length_of_number_string(value):
+    value = value.removeprefix("-")
+
+    if value.startswith("%"):
+        return len(value.removeprefix("%")) // 8
+
+    elif value.startswith("$"):
+        return len(value.removeprefix("$")) // 2
+
+    elif value.startswith("'"):
+        assert value.count("'") == 2
+        return len(value) - 2
+
+    elif value.isnumeric():
+        return ceil(log(1 + value, 256))
+
+    else:
+        raise ValueError(f"Unexpected {value}")
+
+
 OPERATORS = "+,-,*,/,%,^,&,|,~,<<,>>".split(",")
 
+
 COMPARATORS = "=,!=,!,<,>,<=,>=".split(",")
-
-
 BUILT_IN_FUNCTIONS = ["HIGH", "LOW", "BANK", "PAGE", "SIZEOF"]
 
 
