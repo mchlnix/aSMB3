@@ -464,16 +464,32 @@ class FormulaParser:
     def has_macro_params(self):
         return self._has_type(_LeafType.MACRO_PARAM)
 
-    def _has_type(self, leaf_type: _LeafType):
+    def fill_in_symbols(self, symbols: dict[str, str]):
+        for leaf in self._depth_first_tree_walk():
+            if leaf.leaf_type != _LeafType.SYMBOL:
+                continue
+
+            if leaf.value not in symbols:
+                continue
+
+            leaf.leaf_type = _LeafType.NUMBER
+            leaf.value = symbols[leaf.value]
+
+    def _depth_first_tree_walk(self):
         leaves = self.tree.leaves.copy()
 
         while leaves:
             leaf = leaves.pop(0)
 
+            yield leaf
+
+            leaves.extend(leaf.leaves)
+
+    def _has_type(self, leaf_type: _LeafType):
+        for leaf in self._depth_first_tree_walk():
             if leaf.leaf_type == leaf_type:
                 return True
 
-            leaves.extend(leaf.leaves)
         else:
             return False
 
