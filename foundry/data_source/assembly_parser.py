@@ -3,18 +3,18 @@ from collections import OrderedDict
 from pathlib import Path
 
 from foundry.data_source import (
-    BUILT_IN_FUNCTIONS,
+    BYTE_DIRECTIVE,
     COMPARATORS,
     DIRECTIVES,
     FUNCTIONS,
     INSTRUCTIONS,
     OPERATORS,
     RELATIVE_ADDRESSING_INSTRUCTIONS,
+    WORD_DIRECTIVE,
     AsmPosition,
-    byte_length_of_number_string,
     strip_comment,
 )
-from foundry.data_source.formula_parser import FormulaParser
+from foundry.data_source.formula_parser import FormulaParser, LeafType
 from foundry.data_source.macro import Macro
 from smb3parse.util import bin_int, hex_int
 
@@ -106,12 +106,12 @@ def _is_const_assignment(line: str):
 
 def _is_byte(line: str):
     # TODO count the bytes
-    return ".byte" in line or ".db" in line
+    return BYTE_DIRECTIVE in line or ".db" in line
 
 
 def _is_word(line: str):
     # TODO count the words
-    return ".word" in line or ".dw" in line
+    return WORD_DIRECTIVE in line or ".dw" in line
 
 
 def _is_instruction(line: str):
@@ -166,15 +166,15 @@ def _parse_number(number_str: str):
 def _split_byte_word_parts(line):
     line = strip_comment(line)
 
-    if line.startswith((".byte", ".word")):
+    if line.startswith((BYTE_DIRECTIVE, WORD_DIRECTIVE)):
         symbol = None
         definition = line
 
     else:
-        if ".byte" in line:
-            search_for = ".byte"
-        elif ".word" in line:
-            search_for = ".word"
+        if BYTE_DIRECTIVE in line:
+            search_for = BYTE_DIRECTIVE
+        elif WORD_DIRECTIVE in line:
+            search_for = WORD_DIRECTIVE
         else:
             raise ValueError("What?")
 
@@ -266,7 +266,7 @@ class AssemblyParser:
 
             self._prg_pass_2(prg_file)
 
-            assert self._current_byte_offset == 0x2000
+            assert self._current_byte_offset == 0x2000, (prg_file, hex(0x2000 - self._current_byte_offset))
 
     def _parse_smb3_asm(self):
         self._line_co = 0
@@ -314,18 +314,18 @@ class AssemblyParser:
                 self._handle_ines_directive(lines, smb3_asm)
 
             elif _is_byte(line):
-                if line.startswith(".byte"):
+                if line.startswith(BYTE_DIRECTIVE):
                     continue
 
-                symbol_name = line.split(".byte")[0].replace(":", "").strip()
+                symbol_name = line.split(BYTE_DIRECTIVE)[0].replace(":", "").strip()
 
                 self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
 
             elif _is_word(line):
-                if line.startswith(".word"):
+                if line.startswith(WORD_DIRECTIVE):
                     continue
 
-                symbol_name = line.split(".word")[0].replace(":", "").strip()
+                symbol_name = line.split(WORD_DIRECTIVE)[0].replace(":", "").strip()
 
                 self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
 
@@ -456,16 +456,16 @@ class AssemblyParser:
             elif _is_byte(line):
                 line = strip_comment(line)
 
-                if not line.startswith(".byte"):
-                    symbol_name = line.split(".byte")[0].replace(":", "").strip()
+                if not line.startswith(BYTE_DIRECTIVE):
+                    symbol_name = line.split(BYTE_DIRECTIVE)[0].replace(":", "").strip()
 
                     self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
 
             elif _is_word(line):
                 line = strip_comment(line)
 
-                if not line.startswith(".word"):
-                    symbol_name = line.split(".word")[0].replace(":", "").strip()
+                if not line.startswith(WORD_DIRECTIVE):
+                    symbol_name = line.split(WORD_DIRECTIVE)[0].replace(":", "").strip()
 
                     self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co, 0)
 
@@ -587,7 +587,7 @@ class AssemblyParser:
 
                 word_co = self._count_bytes_or_words(line)
 
-                self._current_byte_offset += word_co * BYTES_PER_WORD
+                self._current_byte_offset += word_co
 
             elif _is_ignored_directive(line):
                 self._print_line("Directive igno", lines.pop(0).strip())
@@ -684,10 +684,24 @@ class AssemblyParser:
             return ""
 
     def _count_bytes_or_words(self, line):
-        parts = strip_comment(line).split(".byte")
+        if BYTE_DIRECTIVE in line:
+            return self._count_occurrences(line, BYTE_DIRECTIVE)
 
-        if len(parts) == 1:
-            parts = strip_comment(line).split(".word")
+        if WORD_DIRECTIVE in line:
+            return self._count_occurrences(line, WORD_DIRECTIVE)
+
+        raise ValueError(f"Bruh, What? {line}")
+
+    @staticmethod
+    def _count_occurrences(line: str, delimiter: str):
+        if delimiter == BYTE_DIRECTIVE:
+            occurrence_value = 1
+        elif delimiter == WORD_DIRECTIVE:
+            occurrence_value = 2
+        else:
+            raise ValueError(f"Bruh, What? {line}")
+
+        parts = strip_comment(line).split(delimiter)
 
         _symbol, definition = parts
 
@@ -700,61 +714,15 @@ class AssemblyParser:
         fp = FormulaParser(definition)
         fp.parse()
 
-        byte_parts: list[str] = fp.parts
-        print(fp.parts)
+        assert len(fp.tree.leaves) == 1
 
-        skip_next_one = False
-        count = 0
+        if fp.tree.leaves[0].leaf_type == LeafType.LISTING:
+            leaf_count = len(fp.tree.leaves[0].leaves)
 
-        for byte_part in byte_parts:
-            if byte_part in OPERATORS:
-                continue
+            return leaf_count * occurrence_value
 
-            if skip_next_one:
-                skip_next_one = False
-                continue
-
-            if byte_part in self._const_lut:
-                print("Found const")
-
-                value = self._const_lut[byte_part]
-
-                count += byte_length_of_number_string(value)
-
-            elif byte_part in self._symbol_lut:
-                print("Found Symbol")
-
-                asm_pos = self._symbol_lut[byte_part]
-
-                count += asm_pos.size
-
-            elif byte_part in self._incl_lut:
-                count += self._incl_lut[byte_part]
-
-            elif byte_part in self._ram_lut:
-                print("Found RAM Var")
-
-                count += 1
-
-            elif byte_part in self._func_lut or byte_part in BUILT_IN_FUNCTIONS:
-                print(f"Found Function {byte_part}")
-                # TODO expand function for accurate size
-                count += 0
-
-            elif "|" == byte_part:
-                skip_next_one = True
-                continue
-
-            elif self._is_func_call(byte_part):
-                pass
-
-            elif _is_calculation(byte_part):
-                pass
-
-            else:
-                _byte = _parse_number(byte_part)
-
-        return len(byte_parts)
+        else:
+            return occurrence_value
 
     def _num_or_const(self, line: str):
         line = line.strip()
