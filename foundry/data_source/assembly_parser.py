@@ -654,6 +654,8 @@ class AssemblyParser:
 
                 if strip_comment(line) != "org $D800":  # known bad line. ignore
                     raise ValueError(f"What was that? PRG {prg_file.name}")
+                else:
+                    self._current_byte_offset = 0xD800 % 0x2000
 
         assert line_count == self._line_co, (line_count, self._line_co, prg_file)
 
