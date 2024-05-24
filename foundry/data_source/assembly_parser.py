@@ -490,16 +490,9 @@ class AssemblyParser:
                 line = strip_comment(line)
 
                 if ":" in line:
-                    symbol, path = map(str.strip, strip_comment(line).split(".include"))
-                    symbol = symbol.strip().removesuffix(":")
-                    path = path.replace('"', "").strip()
-
-                    if not path.endswith(".asm"):
-                        path += ".asm"
-
-                    assert (self._root_dir / path).is_file(), self._root_dir / path
-
-                    self._incl_lut[symbol] = len((self._root_dir / path).read_bytes())
+                    # read any data includes, like levels in step 2
+                    lines.pop(0)
+                    continue
 
                 file_name = line.split(".include")[1].replace('"', "").strip()
                 absolute_name = self._root_dir / file_name
@@ -629,11 +622,24 @@ class AssemblyParser:
             elif _is_const_assignment(line):
                 self._print_line("Const Assign", lines.pop(0).strip())
 
-            elif _is_symbol_definition(line):
-                self._print_line("Symbol Define", lines.pop(0).strip())
-
             elif _is_include_directive(line):
                 self._print_line("Directive Incl", lines.pop(0).strip())
+
+                symbol, path = map(str.strip, strip_comment(line).split(".include"))
+                symbol = symbol.strip().removesuffix(":")
+                self._symbol_lut[symbol] = AsmPosition(prg_file, self._line_co)
+
+                path = path.replace('"', "").strip()
+
+                if not path.endswith(".asm"):
+                    path += ".asm"
+
+                assert (self._root_dir / path).is_file(), self._root_dir / path
+
+                self._current_byte_offset += self._count_include_bytes(self._root_dir / path)
+
+            elif _is_symbol_definition(line):
+                self._print_line("Symbol Define", lines.pop(0).strip())
 
             else:
                 self._print_line("Ignoring", lines.pop(0).strip())
@@ -642,6 +648,12 @@ class AssemblyParser:
                     raise ValueError(f"What was that? PRG {prg_file.name}")
 
         assert line_count == self._line_co, (line_count, self._line_co, prg_file)
+
+    def _count_include_bytes(self, path: Path):
+        with path.open() as f:
+            lines = filter(lambda line: _is_byte(line) or _is_word(line), f.readlines())
+
+        return sum(self._count_bytes_or_words(line) for line in lines)
 
     def _count_macro(self, line, macro_name):
         macro = self._macro_lut[macro_name]
