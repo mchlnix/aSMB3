@@ -67,6 +67,49 @@ def test_byte_listing():
     assert not fp.has_macro_params
 
 
+def test_byte_listing_bit_op():
+    fp = FormulaParser("VU_REPEAT | $06, $A9")
+    fp.parse()
+
+    assert fp.parts == ["VU_REPEAT", "|", "$06", "$A9"], fp.parts
+    assert fp.debug_str_tree() == (
+        "('', ROOT, l=["
+        "('', LISTING, l=["
+        "('', FORMULA, l=["
+        "('VU_REPEAT', SYMBOL, l=[]), ('|', OPERATOR, l=[]), ('$06', NUMBER, l=[])"
+        "]), "
+        "('$A9', NUMBER, l=[])"
+        "])"
+        "])"
+    ), fp.debug_str_tree()
+
+
+def test_formula_in_byte_listing():
+    fp = FormulaParser("SPR_VFLIP, SPR_VFLIP, SPR_HFLIP | SPR_VFLIP, SPR_HFLIP | SPR_VFLIP")
+    fp.parse()
+
+    assert fp.parts == [
+        "SPR_VFLIP",
+        "SPR_VFLIP",
+        "SPR_HFLIP",
+        "|",
+        "SPR_VFLIP",
+        "SPR_HFLIP",
+        "|",
+        "SPR_VFLIP",
+    ], fp.parts
+    assert fp.debug_str_tree() == (
+        "('', ROOT, l=["
+        "('', LISTING, l=["
+        "('SPR_VFLIP', SYMBOL, l=[]), "
+        "('SPR_VFLIP', SYMBOL, l=[]), "
+        "('', FORMULA, l=[('SPR_HFLIP', SYMBOL, l=[]), ('|', OPERATOR, l=[]), ('SPR_VFLIP', SYMBOL, l=[])]), "
+        "('', FORMULA, l=[('SPR_HFLIP', SYMBOL, l=[]), ('|', OPERATOR, l=[]), ('SPR_VFLIP', SYMBOL, l=[])])"
+        "])"
+        "])"
+    ), fp.debug_str_tree()
+
+
 def test_byte_listing_neg_at_start():
     fp = FormulaParser("-$01, $01")
     fp.parse()
