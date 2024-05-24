@@ -776,7 +776,7 @@ class AssemblyParser:
         print(fp.parts)
 
         if any(part in self._ram_lut for part in fp.parts):
-            return 2
+            return 3
         if any(part in self._symbol_lut or part in self._const_lut for part in fp.parts):
             return 3
 
