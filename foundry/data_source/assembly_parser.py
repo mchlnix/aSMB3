@@ -314,22 +314,6 @@ class AssemblyParser:
             elif _is_ines_directive(line):
                 self._handle_ines_directive(lines)
 
-            elif _is_byte(line):
-                if line.startswith(BYTE_DIRECTIVE):
-                    continue
-
-                symbol_name = line.split(BYTE_DIRECTIVE)[0].replace(":", "").strip()
-
-                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co)
-
-            elif _is_word(line):
-                if line.startswith(WORD_DIRECTIVE):
-                    continue
-
-                symbol_name = line.split(WORD_DIRECTIVE)[0].replace(":", "").strip()
-
-                self._symbol_lut[symbol_name] = AsmPosition(smb3_asm_file, self._line_co)
-
             elif self._try_bank_directive(lines):
                 pass
 
@@ -436,14 +420,6 @@ class AssemblyParser:
                 func_name = line.split(" ")[0].strip().replace(":", "")
 
                 self._func_lut[func_name] = AsmPosition(prg_file, self._line_co)
-
-            elif _is_ds_directive(line):
-                # no byte size
-                self._print_line("Directive ds", line)
-
-                ram_var = strip_comment(line).split(".ds")[0].replace(":", "").strip()
-
-                self._ram_lut[ram_var] = AsmPosition(prg_file, self._line_co)
 
             elif _is_byte(line):
                 line = strip_comment(line)
