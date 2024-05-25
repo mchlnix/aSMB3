@@ -36,7 +36,7 @@ class LeafType(Enum):
     FORMULA = 5
     FUNCTION_PARAMS = 6
     OPERATOR = 7
-    LISTING = 8
+    LIST = 8
     MACRO_PARAM = 9
 
 
@@ -224,7 +224,7 @@ class FormulaParser:
             self._skip()
 
         elif char == ",":
-            self._maybe_insert_parent(LeafType.LISTING)
+            self._maybe_insert_parent(LeafType.LIST)
             self._skip()
 
         else:
@@ -235,18 +235,18 @@ class FormulaParser:
         if self._current_leaf.leaf_type == leaf_type:
             return
 
-        # 3. after a formula, suddenly a listing
-        if leaf_type == LeafType.LISTING and self._current_leaf.leaf_type == LeafType.FORMULA:
+        # 3. after a formula, suddenly a list
+        if leaf_type == LeafType.LIST and self._current_leaf.leaf_type == LeafType.FORMULA:
             cur_leaf = self._current_leaf
             assert cur_leaf.parent
 
-            if cur_leaf.parent.leaf_type == LeafType.LISTING:
-                # formula is already in a listing
+            if cur_leaf.parent.leaf_type == LeafType.LIST:
+                # formula is already in a list
                 self._current_leaf = cur_leaf.parent
                 return
 
-        # 4. we can't be in a listing and want to make a formula its parent, because listings cannot be inside formulas,
-        #    so take the last child of the listing instead, because it is the first operand of the formula
+        # 4. we can't be in a list and want to make a formula its parent, because lists cannot be inside formulas,
+        #    so take the last child of the list instead, because it is the first operand of the formula
         # 5. nothing to consider, just insert new parent between current leaf and last child
         else:
             assert self._current_leaf.leaves
@@ -512,7 +512,7 @@ class FormulaParser:
             assert not leaf.leaves
             return 0
 
-        if leaf.leaf_type == LeafType.LISTING:
+        if leaf.leaf_type == LeafType.LIST:
             assert len(leaf.leaves) >= 2
             return sum(FormulaParser._count_leaf_byte_size(leaf) for leaf in leaf.leaves)
 

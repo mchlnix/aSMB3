@@ -16,6 +16,7 @@ from foundry.data_source import (
 )
 from foundry.data_source.formula_parser import FormulaParser, LeafType
 from foundry.data_source.macro import Macro
+from smb3parse.constants import BASE_OFFSET
 from smb3parse.util import apply, bin_int, hex_int
 
 os.chdir("/home/michael/Gits/smb3")
@@ -261,13 +262,28 @@ class AssemblyParser:
 
             self._prg_pass_1(prg_file)
 
-        for prg_file in self._prg_lut.values():
+        for index, prg_file in enumerate(self._prg_lut.values()):
             if not prg_file.is_file():
                 raise ValueError(f"Could not load {prg_file} correctly. Doesn't exist or is not a file.")
 
             self._prg_pass_2(prg_file)
 
-            assert self._current_byte_offset == 0x2000, (prg_file, hex(0x2000 - self._current_byte_offset))
+            if self._current_byte_offset != 0x2000:
+                bytes_missing = 0x2000 - self._current_byte_offset
+
+                error_message = (
+                    hex(BASE_OFFSET + self._current_byte_offset + index * 0x2000),
+                    prg_file.name,
+                    hex(bytes_missing),
+                )
+
+                while bytes_missing > 0x10:
+                    print(".byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF")
+                    bytes_missing -= 0x10
+
+                print(".byte $FF" + ", $FF" * (bytes_missing - 1))
+
+                raise ValueError(error_message)
 
     def _parse_smb3_asm(self):
         self._line_co = 0
@@ -726,7 +742,7 @@ class AssemblyParser:
 
         assert len(fp.tree.leaves) == 1
 
-        if fp.tree.leaves[0].leaf_type == LeafType.LISTING:
+        if fp.tree.leaves[0].leaf_type == LeafType.LIST:
             leaf_count = len(fp.tree.leaves[0].leaves)
 
             return leaf_count * occurrence_value
