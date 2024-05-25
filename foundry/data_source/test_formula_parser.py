@@ -18,7 +18,7 @@ def test_bit_or():
     ), fp.debug_str_tree()
 
 
-def test_number_listing():
+def test_number_list():
     fp = FormulaParser("2,   4,   2,   8	; 0")
     fp.parse()
 
@@ -26,7 +26,7 @@ def test_number_listing():
     assert fp.debug_str_tree() == (
         (
             "('', ROOT, l=["
-            "('', LISTING, l=[('2', NUMBER, l=[]), ('4', NUMBER, l=[]), ('2', NUMBER, l=[]), ('8', NUMBER, l=[])])"
+            "('', LIST, l=[('2', NUMBER, l=[]), ('4', NUMBER, l=[]), ('2', NUMBER, l=[]), ('8', NUMBER, l=[])])"
             "])"
         )
     ), fp.debug_str_tree()
@@ -43,7 +43,7 @@ def test_function_call():
         "('', ROOT, l=["
         "('MLEN', FUNCTION_NAME, l=["
         "('()', FUNCTION_PARAMS, l=["
-        "('', LISTING, l=[('DMC01', SYMBOL, l=[]), ('DMC01_End', SYMBOL, l=[])])"
+        "('', LIST, l=[('DMC01', SYMBOL, l=[]), ('DMC01_End', SYMBOL, l=[])])"
         "])"
         "])"
         "])"
@@ -52,13 +52,13 @@ def test_function_call():
     assert not fp.has_macro_params
 
 
-def test_byte_listing():
+def test_byte_list():
     fp = FormulaParser("$00, -$03,  $03,  $00,  $00,  $00,  $00,  $00 ; $00-$07")
     fp.parse()
 
     assert fp.parts == "$00, -$03, $03, $00, $00, $00, $00, $00".split(", "), fp.parts
     assert fp.debug_str_tree() == (
-        "('', ROOT, l=[('', LISTING, l=["
+        "('', ROOT, l=[('', LIST, l=["
         "('$00', NUMBER, l=[]), ('-$03', NUMBER, l=[]), ('$03', NUMBER, l=[]), ('$00', NUMBER, l=[]), "
         "('$00', NUMBER, l=[]), ('$00', NUMBER, l=[]), ('$00', NUMBER, l=[]), ('$00', NUMBER, l=[])"
         "])])"
@@ -67,14 +67,14 @@ def test_byte_listing():
     assert not fp.has_macro_params
 
 
-def test_byte_listing_bit_op():
+def test_byte_list_bit_op():
     fp = FormulaParser("VU_REPEAT | $06, $A9")
     fp.parse()
 
     assert fp.parts == ["VU_REPEAT", "|", "$06", "$A9"], fp.parts
     assert fp.debug_str_tree() == (
         "('', ROOT, l=["
-        "('', LISTING, l=["
+        "('', LIST, l=["
         "('', FORMULA, l=["
         "('VU_REPEAT', SYMBOL, l=[]), ('|', OPERATOR, l=[]), ('$06', NUMBER, l=[])"
         "]), "
@@ -84,7 +84,7 @@ def test_byte_listing_bit_op():
     ), fp.debug_str_tree()
 
 
-def test_formula_in_byte_listing():
+def test_formula_in_byte_list():
     fp = FormulaParser("SPR_VFLIP, SPR_VFLIP, SPR_HFLIP | SPR_VFLIP, SPR_HFLIP | SPR_VFLIP")
     fp.parse()
 
@@ -100,7 +100,7 @@ def test_formula_in_byte_listing():
     ], fp.parts
     assert fp.debug_str_tree() == (
         "('', ROOT, l=["
-        "('', LISTING, l=["
+        "('', LIST, l=["
         "('SPR_VFLIP', SYMBOL, l=[]), "
         "('SPR_VFLIP', SYMBOL, l=[]), "
         "('', FORMULA, l=[('SPR_HFLIP', SYMBOL, l=[]), ('|', OPERATOR, l=[]), ('SPR_VFLIP', SYMBOL, l=[])]), "
@@ -110,13 +110,13 @@ def test_formula_in_byte_listing():
     ), fp.debug_str_tree()
 
 
-def test_byte_listing_neg_at_start():
+def test_byte_list_neg_at_start():
     fp = FormulaParser("-$01, $01")
     fp.parse()
 
     assert fp.parts == "-$01, $01".split(", "), fp.parts
     assert (
-        fp.debug_str_tree() == "('', ROOT, l=[('', LISTING, l=[" "('-$01', NUMBER, l=[]), ('$01', NUMBER, l=[])" "])])"
+        fp.debug_str_tree() == "('', ROOT, l=[('', LIST, l=[" "('-$01', NUMBER, l=[]), ('$01', NUMBER, l=[])" "])])"
     ), fp.debug_str_tree()
     assert not fp.has_symbols
     assert not fp.has_macro_params
@@ -160,14 +160,14 @@ def test_long_formula():
     assert not fp.has_macro_params
 
 
-def test_paren_formula_in_listing():
+def test_paren_formula_in_list():
     fp = FormulaParser("0, (LL_LargeBGClouds2B - LL_LargeBGClouds2)")
     fp.parse()
 
     assert fp.parts == ["0", "LL_LargeBGClouds2B", "-", "LL_LargeBGClouds2"], fp.parts
     assert fp.debug_str_tree() == (
         "('', ROOT, l=["
-        "('', LISTING, l=["
+        "('', LIST, l=["
         "('0', NUMBER, l=[]), ('()', PARENS, l=["
         "('', FORMULA, l=["
         "('LL_LargeBGClouds2B', SYMBOL, l=[]), ('-', OPERATOR, l=[]), ('LL_LargeBGClouds2', SYMBOL, l=[])"
@@ -181,7 +181,7 @@ def test_paren_formula_in_listing():
 
     assert fp.debug_str_tree() == (
         "('', ROOT, l=["
-        "('', LISTING, l=["
+        "('', LIST, l=["
         "('0', NUMBER, l=[]), ('()', PARENS, l=["
         "('', FORMULA, l=["
         "('LL_LargeBGClouds2B', SYMBOL, l=[]), ('-', OPERATOR, l=[]), ('LL_LargeBGClouds2', SYMBOL, l=[])"
@@ -202,7 +202,7 @@ def test_fill_in_symbols():
 
     assert fp.debug_str_tree() == (
         "('', ROOT, l=["
-        "('', LISTING, l=["
+        "('', LIST, l=["
         "('0', NUMBER, l=[]), ('()', PARENS, l=["
         "('', FORMULA, l=["
         f"('{symbols['LL_LargeBGClouds2B']}', NUMBER, l=[]), "
@@ -232,6 +232,55 @@ def test_shift_left():
     ), fp.debug_str_tree()
     assert not fp.has_symbols
     assert not fp.has_macro_params
+
+
+def test_binary_number():
+    fp = FormulaParser("%11110000")
+    fp.parse()
+
+    assert fp.parts == ["%11110000"], fp.parts
+    assert fp.debug_str_tree() == "('', ROOT, l=[" "('%11110000', NUMBER, l=[])" "])", fp.debug_str_tree()
+    assert not fp.has_symbols
+    assert not fp.has_macro_params
+
+
+def test_binary_number_in_formula():
+    fp = FormulaParser("($FF & %11110000) >> 8")
+    fp.parse()
+
+    assert fp.parts == ["$FF", "&", "%11110000", ">>", "8"], fp.parts
+    assert fp.debug_str_tree() == (
+        "('', ROOT, l=["
+        "('', FORMULA, l=["
+        "('()', PARENS, l=["
+        "('', FORMULA, l=["
+        "('$FF', NUMBER, l=[]), ('&', OPERATOR, l=[]), ('%11110000', NUMBER, l=[])"
+        "])]), ('>>', OPERATOR, l=[]), ('8', NUMBER, l=[])"
+        "])"
+        "])"
+    ), fp.debug_str_tree()
+    assert not fp.has_symbols
+    assert not fp.has_macro_params
+
+
+def test_formulas_in_byte_list():
+    fp = FormulaParser(
+        "PF_SPINSLIDESUITS_BASE+10, PF_SPINSLIDESUITS_BASE, PF_SPINSLIDESUITS_BASE+10, PF_SPINSLIDESUITS_BASE+1"
+    )
+    fp.parse()
+
+    assert fp.parts == [
+        "PF_SPINSLIDESUITS_BASE",
+        "+",
+        "10",
+        "PF_SPINSLIDESUITS_BASE",
+        "PF_SPINSLIDESUITS_BASE",
+        "+",
+        "10",
+        "PF_SPINSLIDESUITS_BASE",
+        "+",
+        "1",
+    ]
 
 
 def test_macro_param():
