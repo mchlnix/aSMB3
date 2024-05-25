@@ -104,10 +104,6 @@ def _is_close_parens(char: str):
     return char == ")"
 
 
-def _is_function_params_end(char: str):
-    return _is_close_parens(char)
-
-
 class FormulaParser:
     LOGGING = False
 
@@ -324,13 +320,8 @@ class FormulaParser:
         if self._current_leaf.leaf_type != LeafType.OPERATOR:
             self._maybe_insert_parent(LeafType.FORMULA)
 
-        if self._current_leaf.leaf_type != LeafType.OPERATOR:
             leaf = Leaf("", LeafType.OPERATOR)
             self._new_leaf(leaf)
-
-        # ends single character operators
-        if self._last_part_was_operator:
-            self._end_operator()
 
         # matches single character operators and the shift operators
         elif self._current_buffer + char in OPERATORS:
@@ -367,13 +358,7 @@ class FormulaParser:
 
             return
 
-        if not (_is_binary_start(char) or _is_hexadecimal_start(char) or _is_decimal_char(char)):
-            self._take()
-
-        if _is_binary_start(char):
-            self._state = _ParseState.BINARY
-
-        elif _is_hexadecimal_start(char):
+        if _is_hexadecimal_start(char):
             self._state = _ParseState.HEXADECIMAL
 
         elif _is_decimal_char(char):
