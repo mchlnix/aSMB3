@@ -348,8 +348,17 @@ class FormulaParser:
         self._state = _ParseState.NEUTRAL
 
     def _do_numeral(self, char: str):
+        # covers numbers with a sign or binary numbers
         if char in _OPERATOR_NUMERAL_OVERLAY:
-            if not self._last_char_was_comma or self._last_part_was_operator:
+            not_a_new_list_element = self._current_leaf.leaf_type != LeafType.LIST or not self._last_char_was_comma
+            will_not_be_first_leaf = bool(self._current_leaf.leaves)
+            predecessor_can_precede_an_operand = will_not_be_first_leaf and self._current_leaf.leaves[-1].leaf_type in [
+                LeafType.SYMBOL,
+                LeafType.NUMBER,
+                LeafType.PARENS,
+            ]
+
+            if not_a_new_list_element and will_not_be_first_leaf and predecessor_can_precede_an_operand:
                 self._state = _ParseState.OPERATOR
             else:
                 self._new_number_leaf()
