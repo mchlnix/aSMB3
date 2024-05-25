@@ -167,7 +167,6 @@ def _split_byte_word_parts(line):
     line = strip_comment(line)
 
     if line.startswith((BYTE_DIRECTIVE, WORD_DIRECTIVE)):
-        symbol = None
         definition = line
 
     else:
@@ -179,7 +178,6 @@ def _split_byte_word_parts(line):
             raise ValueError("What?")
 
         symbol, definition = line.split(search_for)
-        symbol = symbol.replace(":", "").strip()
 
     fp = FormulaParser(definition)
     fp.parse()
@@ -243,6 +241,9 @@ class AssemblyParser:
 
         self._chr_count = 0
         """Number of CHR banks this assembly purports to have."""
+
+        self._bytes_to_lines: dict[int, AsmPosition] = OrderedDict()
+        """Does not include header bytes, so there is a 16 byte difference between the ROM and these byte positions."""
 
         # TODO: shared byte with mirror. do special handling when reading and writing to this position (6)
         self._ines_mapper = 0
@@ -311,7 +312,7 @@ class AssemblyParser:
                 self._print_line("Directive func", lines.pop(0).strip())
 
             elif _is_ines_directive(line):
-                self._handle_ines_directive(lines, smb3_asm)
+                self._handle_ines_directive(lines)
 
             elif _is_byte(line):
                 if line.startswith(BYTE_DIRECTIVE):
@@ -367,8 +368,7 @@ class AssemblyParser:
                     raise ValueError(f"Redefinition of {name}")
 
                 elif _is_calculation(value):
-                    left, right, operator = _parse_calculation(value)
-                    print(left, right, operator)
+                    _ = _parse_calculation(value)
 
                     value = "xx"
 
@@ -387,29 +387,22 @@ class AssemblyParser:
 
         assert line_count == self._line_co
 
-    def _handle_ines_directive(self, lines, smb3_asm):
+    def _handle_ines_directive(self, lines):
         line = strip_comment(lines[0])
         ines_directive, value = line.split()
+
         if ines_directive == ".inesprg":
             self._prg_count = int(value)
 
-            self._pos_to_asm_lut[4] = AsmPosition(smb3_asm, self._line_co)
-
         elif ines_directive == ".ineschr":
             self._chr_count = int(value)
-
-            self._pos_to_asm_lut[5] = AsmPosition(smb3_asm, self._line_co)
 
         # TODO support extended mappers in byte 7
         elif ines_directive == ".inesmap":
             self._ines_mapper = int(value)
 
-            self._pos_to_asm_lut[6] = AsmPosition(smb3_asm, self._line_co)
-
         elif ines_directive == ".inesmir":
             self._ines_mirror = int(value)
-
-            self._pos_to_asm_lut[6.5] = AsmPosition(smb3_asm, self._line_co)
 
         self._print_line("Directive ines", lines.pop(0).strip())
 
@@ -441,7 +434,6 @@ class AssemblyParser:
                 line = strip_comment(line)
 
                 func_name = line.split(" ")[0].strip().replace(":", "")
-                print(func_name)
 
                 self._func_lut[func_name] = AsmPosition(prg_file, self._line_co)
 
@@ -531,7 +523,6 @@ class AssemblyParser:
                     left, right, operator = _parse_calculation(value)
                     # todo, eval the operation
                     value_int = "calc"
-                    print(left, right, operator)
 
                 else:
                     value_int = _parse_number(value)
@@ -573,14 +564,14 @@ class AssemblyParser:
 
                 word_co = self._count_bytes_or_words(line)
 
-                self._current_byte_offset += word_co
+                self._add_bytes(word_co, prg_file)
 
             elif _is_word(line):
                 self._print_line("Word Include  ", lines.pop(0).strip())
 
                 word_co = self._count_bytes_or_words(line)
 
-                self._current_byte_offset += word_co
+                self._add_bytes(word_co, prg_file)
 
             elif _is_ignored_directive(line):
                 self._print_line("Directive igno", lines.pop(0).strip())
@@ -599,7 +590,7 @@ class AssemblyParser:
 
                 byte_co = self._count_instruction(line)
 
-                self._current_byte_offset += byte_co
+                self._add_bytes(byte_co, prg_file)
 
             elif Macro.macro_on_line(line):
                 self._print_line("Macro Start", lines.pop(0).strip())
@@ -614,7 +605,7 @@ class AssemblyParser:
             elif macro_name := self._is_macro_invoke(line):
                 self._print_line("Macro Invoke", lines.pop(0).strip())
 
-                self._count_macro(line, macro_name)
+                self._count_macro(line, macro_name, prg_file)
 
             elif self._is_func_call(line):
                 self._print_line("Func Invoke", lines.pop(0).strip())
@@ -636,7 +627,7 @@ class AssemblyParser:
 
                 assert (self._root_dir / path).is_file(), self._root_dir / path
 
-                self._current_byte_offset += self._count_include_bytes(self._root_dir / path)
+                self._add_bytes(self._count_include_bytes(self._root_dir / path), prg_file)
 
             elif _is_symbol_definition(line):
                 self._print_line("Symbol Define", lines.pop(0).strip())
@@ -647,7 +638,7 @@ class AssemblyParser:
                 if len(parts) > 1 and _is_instruction(parts[1]):
                     byte_co = self._count_instruction(parts[1])
 
-                    self._current_byte_offset += byte_co
+                    self._add_bytes(byte_co, prg_file)
 
             else:
                 self._print_line("Ignoring", lines.pop(0).strip())
@@ -658,6 +649,11 @@ class AssemblyParser:
                     self._current_byte_offset = 0xD800 % 0x2000
 
         assert line_count == self._line_co, (line_count, self._line_co, prg_file)
+
+    def _add_bytes(self, byte_count: int, prg_file: Path):
+        self._bytes_to_lines[self._current_byte_offset] = AsmPosition(prg_file, self._line_co)
+
+        self._current_byte_offset += byte_count
 
     def _count_include_bytes(self, path: Path):
         with path.open() as f:
@@ -681,7 +677,7 @@ class AssemblyParser:
 
         return count
 
-    def _count_macro(self, line, macro_name):
+    def _count_macro(self, line, macro_name, prg_file: Path):
         macro = self._macro_lut[macro_name]
         assert line.startswith(macro_name), (line, macro_name)
 
@@ -693,22 +689,23 @@ class AssemblyParser:
             self._print_line("Macro Expand", expanded_line)
 
             if inner_macro_name := self._is_macro_invoke(expanded_line):
-                self._count_macro(expanded_line, inner_macro_name)
+                self._count_macro(expanded_line, inner_macro_name, prg_file)
 
                 continue
 
             elif _is_byte(expanded_line):
-                word_co = self._count_bytes_or_words(expanded_line)
+                byte_co = self._count_bytes_or_words(expanded_line)
 
-                self._current_byte_offset += word_co
+                self._add_bytes(byte_co, prg_file)
 
             elif _is_word(expanded_line):
                 word_co = self._count_bytes_or_words(expanded_line)
 
-                self._current_byte_offset += word_co * BYTES_PER_WORD
+                self._add_bytes(word_co, prg_file)
 
             else:
-                self._current_byte_offset += self._count_instruction(expanded_line)
+                byte_co = self._count_instruction(expanded_line)
+                self._add_bytes(byte_co, prg_file)
 
     def _is_macro_invoke(self, line):
         if ".macro" in line:
@@ -746,7 +743,6 @@ class AssemblyParser:
         definition = definition.strip()
 
         if definition[0] == '"' == definition[-1] == '"':
-            print("Found String")
             return len(definition) - 2
 
         fp = FormulaParser(definition)
@@ -810,8 +806,6 @@ class AssemblyParser:
 
         fp = FormulaParser(args)
         fp.parse()
-
-        print(fp.parts)
 
         if any(part in self._ram_lut for part in fp.parts):
             return 3
