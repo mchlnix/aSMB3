@@ -8,6 +8,7 @@ from foundry.data_source import (
     DIRECTIVES,
     FUNCTIONS,
     INSTRUCTIONS,
+    NUMERAL_START_CHARS,
     OPERATORS,
     RELATIVE_ADDRESSING_INSTRUCTIONS,
     WORD_DIRECTIVE,
@@ -18,6 +19,7 @@ from foundry.data_source.formula_parser import FormulaParser, LeafType
 from foundry.data_source.macro import Macro
 from smb3parse.constants import BASE_OFFSET
 from smb3parse.util import apply, bin_int, hex_int
+from smb3parse.util.rom import PRG_BANK_SIZE
 
 os.chdir("/home/michael/Gits/smb3")
 
@@ -42,6 +44,14 @@ def _is_ignored_directive(line: str):
 
     directive = strip_comment(line).split(" ")[0]
     return directive in [".data", ".org", ".code"]
+
+
+def _is_org_directive(line: str):
+    if not _is_generic_directive(line):
+        return False
+
+    directive = strip_comment(line).split(" ")[0]
+    return directive == ".org"
 
 
 def _is_generic_directive(line: str):
@@ -94,7 +104,7 @@ def _is_symbol_definition(line: str):
     line = strip_comment(line)
 
     if ":" not in line:
-        return len(line.split()) == 1
+        return len(line.split()) == 1 and not _is_instruction(line)
 
     return not line.startswith(":")  # have some name before the colon
 
@@ -121,6 +131,25 @@ def _is_instruction(line: str):
     instruction, *_ = line.split(" ")
 
     return instruction in INSTRUCTIONS
+
+
+def _string_is_calculation(line: str):
+    for char in line:
+        if char in OPERATORS:
+            continue
+
+        if char == " ":
+            continue
+
+        if char in NUMERAL_START_CHARS:
+            continue
+
+        if char.isnumeric():
+            continue
+
+        return False
+
+    return True
 
 
 def _parse_number(number_str: str):
@@ -156,7 +185,14 @@ def _parse_number(number_str: str):
         number = int(number_str)
 
     else:
-        raise ValueError(f"Couldn't parse number '{number_str}'.")
+        # Couldn't parse it as a number maybe it's a calculation, like 2*2
+        if not _string_is_calculation(number_str):
+            raise ValueError(f"Couldn't parse number '{number_str}'.")
+
+        number = eval(number_str)
+
+        if not isinstance(number, int):
+            raise ValueError(f"Couldn't parse number '{number_str}'.")
 
     if is_negative:
         number = -number
@@ -225,14 +261,14 @@ class AssemblyParser:
         self._prg_lut: dict[int, Path] = {}
         self._chr_lut: list[str] = []
 
-        self._pos_to_asm_lut: OrderedDict[float, AsmPosition] = OrderedDict()
-        """
-        A dictionary connecting the positions in the assembled ROM with their code counterparts. Not every position is
-        represented, so find the closest without going over and reparse the piece of code to find the exact match.
-        """
+        self._current_byte_offset = 0
+        """Running count of the byte position in the PRG we currently are at, when parsing the assembly code."""
 
-        self._current_byte_offset: int = 0
-        """Running count of the byte position in the ROM we currently are, when parsing the assembly code."""
+        self._current_prg_offset = 0
+        """
+        Used when parsing, to keep track of how far along the ROM we already are. 
+        This plus current byte offset give the position in the ROM.
+        """
 
         self._line_co = 0
         """The current line we are at, in the file we are currently parsing."""
@@ -287,6 +323,7 @@ class AssemblyParser:
 
     def _parse_smb3_asm(self):
         self._line_co = 0
+        ram_address = 0x0
 
         smb3_asm = self._root_dir / "smb3.asm"
 
@@ -310,13 +347,25 @@ class AssemblyParser:
                 # no byte size
                 self._print_line("Comment", lines.pop(0).strip())
 
+            elif _is_org_directive(line):
+                print(line)
+                new_ram_address = strip_comment(line).removeprefix(".org")
+
+                ram_address = _parse_number(new_ram_address)
+
+                self._print_line("Directive org", lines.pop(0).strip())
+
             elif _is_ds_directive(line):
                 # no byte size
                 self._print_line("Directive ds", lines.pop(0).strip())
 
-                ram_var = strip_comment(line).split(".ds")[0].replace(":", "").strip()
+                ram_var_name, region_size = strip_comment(line).split(".ds")
 
-                self._ram_lut[ram_var] = AsmPosition(smb3_asm, self._line_co)
+                ram_var_name = ram_var_name.replace(":", "").strip()
+                region_size = _parse_number(region_size)
+
+                self._ram_lut[ram_var_name] = AsmPosition(smb3_asm, self._line_co, ram_address)
+                ram_address += region_size
 
             elif _is_func_directive(line):
                 line = strip_comment(line)
@@ -375,11 +424,14 @@ class AssemblyParser:
                 self._const_lut[name] = value
 
             elif _is_symbol_definition(line):
-                self._print_line("Symbol Define", lines.pop(0).strip())
+                # Is actually a bulk ram definition in the smb3.asm file
+                self._print_line("Ram Define", lines.pop(0).strip())
 
                 symbol = strip_comment(line).split(":")[0].strip()
 
-                self._symbol_lut[symbol] = AsmPosition(smb3_asm, self._line_co)
+                print(ram_address)
+
+                self._ram_lut[symbol] = AsmPosition(smb3_asm, self._line_co, ram_address)
 
             else:
                 self._print_line("Ignoring", lines.pop(0).strip())
@@ -734,7 +786,8 @@ class AssemblyParser:
 
         definition = definition.strip()
 
-        if definition[0] == '"' == definition[-1] == '"':
+        if definition[0] == definition[-1] == '"':
+            # Text, where every character is one byte
             return len(definition) - 2
 
         fp = FormulaParser(definition)
