@@ -300,6 +300,23 @@ class AssemblyParser:
 
         return header
 
+    def closest_pos_for_byte(self, byte_offset: int):
+        position_before_this = 0
+
+        for pos_in_rom in self._bytes_to_lines:
+            if pos_in_rom == byte_offset:
+                return pos_in_rom
+
+            if pos_in_rom > byte_offset:
+                return position_before_this
+
+            position_before_this = pos_in_rom
+
+        else:
+            raise ValueError(
+                f"{byte_offset} larger than last known parsed position: {list(self._bytes_to_lines.keys())[-1]}."
+            )
+
     def parse(self):
         self._parse_smb3_asm()
 
