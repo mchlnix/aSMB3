@@ -2,6 +2,7 @@ from os.path import basename
 from pathlib import Path
 from typing import Optional
 
+from foundry.data_source.data_source import AssemblyByteArray
 from foundry.game.additional_data import AdditionalData
 from smb3parse.constants import reset_global_offsets
 from smb3parse.util.rom import PRG_BANK_SIZE, INESHeader, Rom
@@ -19,7 +20,7 @@ class ROM(Rom):
 
     additional_data: AdditionalData
 
-    path: str = ""
+    path: Path | str = ""
     name: str = ""
 
     fns_path: str = ""
@@ -69,6 +70,16 @@ class ROM(Rom):
             ROM.additional_data = AdditionalData.from_str(data[additional_data_start:].decode("utf-8"), ROM())
 
         ROM.reset_graphics()
+
+    @staticmethod
+    def load_from_asm(smb3_asm_path: Path, reset_globals=True):
+        if reset_globals:
+            ROM.fns_path = ROM.smb3_asm_path = ""
+            reset_global_offsets()
+
+        ROM.path = smb3_asm_path
+        ROM.rom_data = AssemblyByteArray(smb3_asm_path)
+        ROM.additional_data = AdditionalData(ROM())
 
     @staticmethod
     def reset_graphics():
