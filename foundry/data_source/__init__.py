@@ -49,7 +49,7 @@ def byte_length_of_number_string(value):
 BYTE_DIRECTIVE = ".byte"
 WORD_DIRECTIVE = ".word"
 
-
+NUMERAL_START_CHARS = "$%+-"
 OPERATORS = "+,-,*,/,%,^,&,|,~,<<,>>".split(",")
 
 

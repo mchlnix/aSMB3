@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from foundry.data_source import AsmPosition
+from foundry.data_source.assembly_parser import AssemblyParser
 from foundry.data_source.macro import Macro
 
 
@@ -24,7 +25,7 @@ def macro_example():
 
 @pytest.fixture
 def asm_position():
-    return AsmPosition(Path(), 0)
+    return AsmPosition(Path(), 0, 0)
 
 
 @pytest.fixture
@@ -60,3 +61,22 @@ def test_macro_expansion(macro):
         ".byte $FF",
         ".endm",
     ]
+
+
+def test_line_from_position():
+    expected_line = ".word Level_SlopeQuad00	; Tile quad $00"
+
+    path_to_prg = Path("/home/michael/Gits/smb3/PRG/prg000.asm")
+
+    line = AssemblyParser._line_from_position(AsmPosition(path_to_prg, 29, 0))
+
+    assert line == expected_line
+
+
+def test_convert_line_to_bytes():
+    expected_bytes = b"\x08\xC0"
+
+    ap = AssemblyParser(Path())
+    ap._symbol_lut["Level_SlopeQuad00"] = AsmPosition(Path(), 29, 0xC008)
+
+    assert expected_bytes == ap._convert_line_to_bytes(".word Level_SlopeQuad00")

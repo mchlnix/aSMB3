@@ -2,7 +2,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable
 
-from foundry.data_source import OPERATORS, byte_length_of_number_string
+from foundry.data_source import (
+    NUMERAL_START_CHARS,
+    OPERATORS,
+    byte_length_of_number_string,
+)
 
 
 class _ParseState(Enum):
@@ -51,9 +55,7 @@ class Leaf:
 
 _VALID_END_STATES = [_ParseState.END, _ParseState.NEUTRAL]
 
-_NUMERAL_START_CHARS = "$%+-"
-
-_OPERATOR_NUMERAL_OVERLAY = set(OPERATORS).intersection(_NUMERAL_START_CHARS)
+_OPERATOR_NUMERAL_OVERLAY = set(OPERATORS).intersection(NUMERAL_START_CHARS)
 
 
 def _is_operator(char: str):
@@ -65,7 +67,7 @@ def _is_macro_param_start(char: str):
 
 
 def _is_numeral_start(char: str):
-    return char in _NUMERAL_START_CHARS or char.isnumeric()
+    return char in NUMERAL_START_CHARS or char.isnumeric()
 
 
 def _is_binary_start(char):
