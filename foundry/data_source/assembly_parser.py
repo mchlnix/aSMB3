@@ -974,7 +974,59 @@ class AssemblyParser:
     def _print_line(self, line_category: str, line: str):
         print(f"{line_category:<15}{self._line_co} | {self._current_byte_offset:x}: {line}")
 
+    def line_to_bytes(self, asm_position: AsmPosition):
+        return self._convert_line_to_bytes(self._line_from_position(asm_position))
 
-ap = AssemblyParser(smb3_asm_file.absolute().parent)
+    @staticmethod
+    def _line_from_position(asm_position: AsmPosition):
+        prg_lines = asm_position.file.open("r").readlines()
 
-ap.parse()
+        return prg_lines[asm_position.line_no - 1].strip()
+
+    def _convert_line_to_bytes(self, line: str) -> bytearray:
+        return_array = bytearray()
+
+        if WORD_DIRECTIVE in line:
+            value = line.removeprefix(WORD_DIRECTIVE).strip()
+
+            # in case of text
+            if '"' in value:
+                value = value.removeprefix('"').removesuffix('"')
+
+                for char in value:
+                    return_array.append(ord(char))
+
+            # Weirdness
+            elif not value:
+                raise ValueError(f"{line} had no bytes.")
+
+            else:
+                fp = FormulaParser(value)
+                fp.parse()
+
+                assert len(fp.tree.leaves) == 1
+
+                if fp.tree.leaves[0].leaf_type == LeafType.LIST:
+                    for leaf in fp.tree.leaves[0].leaves:
+                        try:
+                            return_array.append(_parse_number(leaf.value))
+                        except ValueError:
+                            assert leaf.value in self._const_lut or leaf.value in self._symbol_lut
+
+                            print(f"Found {leaf.value=}")
+
+                # Just a symbol or const
+                else:
+                    print(f"Found {value=}")
+
+                    return_array.extend(self._symbol_lut[value].byte_value)
+
+            return return_array
+
+        return bytearray(3)
+
+
+if __name__ == "__main__":
+    ap = AssemblyParser(smb3_asm_file.absolute().parent)
+
+    ap.parse()
