@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import ceil, log
 from pathlib import Path
 
@@ -7,6 +7,14 @@ from pathlib import Path
 class AsmPosition:
     file: Path
     line_no: int
+    byte_address: int = field(default=0)
+    byte_value: bytes = field(init=False)
+
+    def __post_init__(self):
+        self.byte_value = self.byte_address.to_bytes(length=2, byteorder="little")
+
+    def __repr__(self):
+        return f"AsmPosition({self.file}, {self.line_no}, {self.byte_value.hex()})"
 
 
 def strip_comment(line: str):
