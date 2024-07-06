@@ -287,6 +287,19 @@ class AssemblyParser:
 
         self._ines_mirror = 0
 
+    @property
+    def ines_header(self):
+        header = bytearray(BASE_OFFSET)
+
+        header[0:3] = bytearray("NES".encode())
+
+        header[3] = 0x1A
+        header[4] = self._prg_count
+        header[5] = self._chr_count
+        header[6] = (self._ines_mapper << 4) + self._ines_mirror
+
+        return header
+
     def parse(self):
         self._parse_smb3_asm()
 
@@ -451,10 +464,10 @@ class AssemblyParser:
 
         # TODO support extended mappers in byte 7
         elif ines_directive == ".inesmap":
-            self._ines_mapper = int(value)
+            self._ines_mapper = int(value) >> 4
 
         elif ines_directive == ".inesmir":
-            self._ines_mirror = int(value)
+            self._ines_mirror = int(value) & 0x0F
 
         self._print_line("Directive ines", lines.pop(0).strip())
 

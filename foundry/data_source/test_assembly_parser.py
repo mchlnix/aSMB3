@@ -63,6 +63,17 @@ def test_macro_expansion(macro):
     ]
 
 
+def test_ines_header():
+    ap = AssemblyParser(Path())
+
+    ap._ines_mapper = 5
+    ap._ines_mirror = 6
+
+    assert ap.ines_header[6] == 0x56
+
+    assert ap.ines_header[7] == 0
+
+
 def test_line_from_position():
     expected_line = ".word Level_SlopeQuad00	; Tile quad $00"
 
