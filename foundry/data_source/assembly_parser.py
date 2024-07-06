@@ -724,8 +724,12 @@ class AssemblyParser:
 
         assert line_count == self._line_co, (line_count, self._line_co, prg_file)
 
+        self._current_prg_offset += PRG_BANK_SIZE
+
     def _add_bytes(self, byte_count: int, prg_file: Path):
-        self._bytes_to_lines[self._current_byte_offset] = AsmPosition(prg_file, self._line_co)
+        pos_in_rom = self._current_prg_offset + self._current_byte_offset
+
+        self._bytes_to_lines[pos_in_rom] = AsmPosition(prg_file, self._line_co)
 
         self._current_byte_offset += byte_count
 
