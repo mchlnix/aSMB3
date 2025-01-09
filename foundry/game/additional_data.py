@@ -235,6 +235,10 @@ class LevelOrganizer:
     def _connect_new_jump_destination_to_level(self, level: "Level"):
         """Find the Found Level for the given Levels Jump Destination and connect them together."""
 
+        if level.header.jump_level_offset == level.header.jump_enemy_offset == 0x00:
+            # Level Jump Destination is explicitly not set, so don't bother keeping track
+            return
+
         if level.header.jump_level_offset and level.header.jump_level_address not in self.old_level_address_to_new:
             raise LookupError(
                 f"Jump Destination Level Address in Header '0x{level.header.jump_level_address:X}' does not point to"
