@@ -1,4 +1,5 @@
 import json
+from operator import xor
 from typing import Sequence
 
 from PySide6.QtCore import QEvent, QRect, Qt, Signal, SignalInstance
@@ -16,10 +17,12 @@ from foundry.gui.ObjectList import ObjectList
 from foundry.gui.util import clear_layout
 from foundry.gui.visualization.level.LevelView import LevelView
 from smb3parse.constants import (
+    LVL_OBJ_LEVEL_END,
     OBJ_AUTOSCROLL,
     OBJ_BOOMBOOM,
     OBJ_CHEST_EXIT,
     OBJ_CHEST_ITEM_SETTER,
+    OBJ_GOAL_CARD,
     OBJ_HAMMER_BRO,
     OBJ_PIPE_EXITS,
     OBJ_TREASURE_CHEST,
@@ -210,11 +213,23 @@ class WarningList(QWidget):
                 chest_objects,
             )
 
+        if xor(self._is_object_in_level(*LVL_OBJ_LEVEL_END), any(self._find_enemies_in_level(OBJ_GOAL_CARD))):
+            self.warn("You shouldn't have a level ending object without a goal card item, but you can have neither.")
+
         self.update()
         self.warnings_updated.emit(bool(self.warnings))
 
     def _find_enemies_in_level(self, enemy_id: int) -> list[EnemyItem]:
         return [enemy for enemy in self.level_ref.level.enemies if enemy.type == enemy_id]
+
+    def _is_object_in_level(self, domain: int, object_index: int) -> bool:
+        return any(
+            [
+                lvl_obj
+                for lvl_obj in self.level_ref.level.objects
+                if lvl_obj.domain == domain and lvl_obj.obj_index == object_index
+            ]
+        )
 
     def _build_enemy_clan_dict(self):
         with (data_dir / "enemy_data.json").open("r") as enemy_data_file:

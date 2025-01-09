@@ -499,6 +499,8 @@ class FoundryMainWindow(MainWindow):
 
         insta_player = InstaPlayer(temp_rom)
 
+        # TODO: reraise exception with error message to not trigger two error dialogs in a row
+
         try:
             insta_player.put_current_level_to_level_1_1(self.level_ref.level)
 

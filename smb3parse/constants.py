@@ -364,7 +364,12 @@ GAME_SCREEN_COUNT = 20
 OFFSET_SIZE = 2  # byte
 ENEMY_SIZE = 3  # byte
 
+# level objects (domain, index)
+LVL_OBJ_LEVEL_END = (0x02, 0x09)
+
+# enemies and item objects
 OBJ_PIPE_EXITS = 0x25
+OBJ_GOAL_CARD = 0x41
 OBJ_BOOMBOOM = 0x4B
 OBJ_FLYING_BOOMBOOM = 0x4C
 OBJ_TREASURE_CHEST = 0x52
