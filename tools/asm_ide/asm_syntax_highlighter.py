@@ -4,18 +4,20 @@ from PySide6.QtGui import QColor, QSyntaxHighlighter
 from foundry.data_source.assembly_parser import _is_instruction
 
 _DEC_NUMBER_REGEX = QRegularExpression("([0-9]+)")
-_HEX_NUMBER_REGEX = QRegularExpression("\$([A-Fa-f0-9]+)")
-_BIN_NUMBER_REGEX = QRegularExpression("\%([0-1]+)")
+_HEX_NUMBER_REGEX = QRegularExpression("(\$[A-Fa-f0-9]+)")
+_BIN_NUMBER_REGEX = QRegularExpression("(\%[0-1]+)")
 _CONST_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\s*\=")
 _STRING_REGEX = QRegularExpression('("[^"]*")')
 _COMMENT_REGEX = QRegularExpression("(;.*)")
+_LABEL_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:.*")
 
 _DEC_NUMBER_COLOR = QColor.fromRgb(255, 0, 0)
-_HEX_NUMBER_COLOR = QColor.fromRgb(200, 200, 0)
+_HEX_NUMBER_COLOR = QColor.fromRgb(150, 150, 0)
 _BIN_NUMBER_COLOR = QColor.fromRgb(0, 200, 200)
-_CONST_COLOR = QColor.fromRgb(0, 0, 255)
+_CONST_COLOR = QColor.fromRgb(0, 51, 204)
 _STRING_COLOR = QColor.fromRgb(255, 153, 0)
-_COMMENT_COLOR = QColor.fromRgb(0, 153, 0)
+_COMMENT_COLOR = QColor.fromRgb(77, 153, 0)
+_LABEL_COLOR = QColor.fromRgb(153, 0, 153)
 
 _INSTRUCTION_COLOR = QColor.fromRgb(255, 0, 0)
 
@@ -24,6 +26,7 @@ _REGEXS = [
     _HEX_NUMBER_REGEX,
     _BIN_NUMBER_REGEX,
     _CONST_REGEX,
+    _LABEL_REGEX,
     _STRING_REGEX,
     _COMMENT_REGEX,
 ]
@@ -33,6 +36,7 @@ _COLORS = [
     _HEX_NUMBER_COLOR,
     _BIN_NUMBER_COLOR,
     _CONST_COLOR,
+    _LABEL_COLOR,
     _STRING_COLOR,
     _COMMENT_COLOR,
 ]

@@ -1,8 +1,12 @@
 from pathlib import Path
 
-from PySide6.QtWidgets import QFileDialog, QMainWindow
+from PySide6.QtGui import Qt
+from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
-from tools.asm_ide.code_area import CodeArea
+from foundry import icon
+from foundry.gui.FoundryMainWindow import TOOLBAR_ICON_SIZE
+from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
+from tools.asm_ide.tab_widget import TabWidget
 
 
 class MainWindow(QMainWindow):
@@ -11,13 +15,38 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("ASM IDE")
 
+        # remove this when shipping
+        self._root_path = Path("/home/michael/Gits/smb3")
+        # self._get_disasm_folder()
+
+        self._central_widget = TabWidget(self)
+        self.setCentralWidget(self._central_widget)
+
+        self._set_up_toolbars()
         self._set_up_menubar()
 
-        self.text_area = CodeArea(self)
+        self._central_widget.open_or_switch_file(self._root_path / "smb3.asm")
 
-        self.setCentralWidget(self.text_area)
+    def _set_up_toolbars(self):
+        self._set_up_menu_toolbar()
+        toolbar = QToolBar()
+        toolbar.setMovable(False)
 
-        self._load_disasm_file(Path("/home/michael/Gits/smb3"))
+        file_tree_view = AsmFileTreeView(str(self._root_path))
+        file_tree_view.file_clicked.connect(self._central_widget.open_or_switch_file)
+
+        toolbar.addWidget(file_tree_view)
+
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
+
+    def _set_up_menu_toolbar(self):
+        toolbar = QToolBar()
+        toolbar.setIconSize(TOOLBAR_ICON_SIZE)
+        toolbar.setMovable(False)
+
+        save_action = toolbar.addAction("Save ROM")
+        save_action.setIcon(icon("save.svg"))
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
 
     def _set_up_menubar(self):
         self.menubar = self.menuBar()
@@ -37,6 +66,3 @@ class MainWindow(QMainWindow):
         dis_asm_root_path = Path(dis_asm_folder)
         if not dis_asm_root_path.is_dir():
             return
-
-    def _load_disasm_file(self, path: Path) -> None:
-        self.text_area.text_document.setPlainText((path / "smb3.asm").read_text())
