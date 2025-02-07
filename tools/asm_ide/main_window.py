@@ -5,9 +5,9 @@ from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
 from foundry import icon
-from foundry.data_source.assembly_parser import AssemblyParser
 from foundry.gui.FoundryMainWindow import TOOLBAR_ICON_SIZE
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
+from tools.asm_ide.named_value_finder import NamedValueFinder
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.tab_widget import TabWidget
 
@@ -22,12 +22,15 @@ class MainWindow(QMainWindow):
         self._root_path = Path("/home/michael/Gits/smb3")
         # self._get_disasm_folder()
 
-        assembly_parser = AssemblyParser(self._root_path)
-        parse_call = assembly_parser.parse()
+        # assembly_parser = AssemblyParser(self._root_path)
+        # parse_call = assembly_parser.parse()
 
-        self._progress_dialog = ParsingProgressDialog(None, parse_call)
+        named_value_finder = NamedValueFinder(self._root_path)
+        parse_call = named_value_finder.parse_files()
 
-        self._central_widget = TabWidget(self, assembly_parser)
+        self._progress_dialog = ParsingProgressDialog(None, named_value_finder.prg_count, parse_call)
+
+        self._central_widget = TabWidget(self, named_value_finder)
         self.setCentralWidget(self._central_widget)
 
         self._set_up_toolbars()
