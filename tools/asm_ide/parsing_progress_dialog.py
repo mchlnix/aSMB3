@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QProgressDialog
 
 
 class ParsingProgressDialog(QProgressDialog):
-    def __init__(self, parent, parsing_generator):
+    def __init__(self, parent, maximum: int, parsing_generator):
         super(ParsingProgressDialog, self).__init__(parent)
 
         self.setWindowTitle("Parsing Progress")
@@ -11,7 +11,7 @@ class ParsingProgressDialog(QProgressDialog):
 
         self.parsing_generator = parsing_generator
 
-        self.setRange(0, next(self.parsing_generator) * 2)
+        self.setRange(0, maximum)
 
         self.setWindowModality(Qt.ApplicationModal)
 
