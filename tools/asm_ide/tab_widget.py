@@ -3,16 +3,18 @@ from pathlib import Path
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QTabWidget
 
+from foundry.data_source.assembly_parser import AssemblyParser
 from tools.asm_ide.code_area import CodeArea
 from tools.asm_ide.tab_bar import TabBar
 
 
 class TabWidget(QTabWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent, assembly_parser: AssemblyParser):
         super(TabWidget, self).__init__(parent)
         self.setMouseTracking(True)
 
         self._path_to_tab = []
+        self._assembly_parser = assembly_parser
 
         tab_bar = TabBar(self)
         tab_bar.middle_click_on.connect(self.tabCloseRequested.emit)
@@ -31,7 +33,7 @@ class TabWidget(QTabWidget):
             self._load_disasm_file(file_path)
 
     def _load_disasm_file(self, path: Path) -> None:
-        code_area = CodeArea(self)
+        code_area = CodeArea(self, self._assembly_parser)
 
         tab_index = self.addTab(code_area, path.name)
 

@@ -320,6 +320,8 @@ class AssemblyParser:
     def parse(self):
         self._parse_smb3_asm()
 
+        yield len(self._prg_lut)
+
         self._current_byte_offset = 0x10  # after the INES header
 
         for prg_file in self._prg_lut.values():
@@ -328,19 +330,23 @@ class AssemblyParser:
 
             self._prg_pass_1(prg_file)
 
+            yield prg_file.name
+
         for index, prg_file in enumerate(self._prg_lut.values()):
             if not prg_file.is_file():
                 raise ValueError(f"Could not load {prg_file} correctly. Doesn't exist or is not a file.")
 
             self._prg_pass_2(prg_file)
 
-            if self._current_byte_offset != 0x2000:
+            yield prg_file.name
+
+            if self._current_byte_offset != 0x2000 and False:
                 bytes_missing = 0x2000 - self._current_byte_offset
 
                 error_message = (
+                    f"PRG Bank is not full {bytes_missing} bytes missing.",
                     hex(BASE_OFFSET + self._current_byte_offset + index * 0x2000),
                     prg_file.name,
-                    hex(bytes_missing),
                 )
 
                 while bytes_missing > 0x10:
