@@ -31,6 +31,7 @@ class MainWindow(QMainWindow):
         self._progress_dialog = ParsingProgressDialog(None, named_value_finder.prg_count, parse_call)
 
         self._central_widget = TabWidget(self, named_value_finder)
+        self._central_widget.redirect_clicked.connect(self.follow_redirect)
         self.setCentralWidget(self._central_widget)
 
         self._set_up_toolbars()
@@ -70,6 +71,10 @@ class MainWindow(QMainWindow):
 
         exit_action = self.file_menu.addAction("Exit")
         exit_action.triggered.connect(self.close)
+
+    def follow_redirect(self, relative_file_path: Path, line_no: int):
+        self._central_widget.open_or_switch_file(self._root_path / relative_file_path)
+        self._central_widget.scroll_to_line(line_no)
 
     def sizeHint(self):
         return QSize(1800, 1600)

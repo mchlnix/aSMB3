@@ -1,15 +1,22 @@
+from pathlib import Path
+
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont, QTextBlock, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QTextEdit, QToolTip
 
+from foundry import ctrl_is_pressed
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.named_value_finder import NamedValueFinder
 
 
 class CodeArea(QTextEdit):
+    redirect_clicked = Signal(Path, int)
+
     def __init__(self, parent, named_value_finder: NamedValueFinder):
         super(CodeArea, self).__init__(parent)
 
         self._named_value_finder = named_value_finder
+        self.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
         self.text_document = QTextDocument()
         self.setDocument(self.text_document)
@@ -70,3 +77,22 @@ class CodeArea(QTextEdit):
 
         else:
             self.setToolTip(None)
+
+    def mouseReleaseEvent(self, e):
+        text_cursor = self.cursorForPosition(e.pos())
+        text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+        word = text_cursor.selectedText().strip()
+
+        if word in self._named_value_finder.constants:
+            info = self._named_value_finder.constants[word]
+        elif word in self._named_value_finder.labels:
+            info = self._named_value_finder.labels[word]
+        else:
+            return super().mouseReleaseEvent(e)
+
+        if not ctrl_is_pressed():
+            return
+
+        _, _, relative_file_path, line_no = info
+
+        self.redirect_clicked.emit(relative_file_path, line_no)

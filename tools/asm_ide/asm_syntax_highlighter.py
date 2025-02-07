@@ -10,7 +10,7 @@ _BIN_NUMBER_REGEX = QRegularExpression("(\%[0-1]+)")
 _CONST_DEF_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\s*\=")
 _STRING_REGEX = QRegularExpression('("[^"]*")')
 _COMMENT_REGEX = QRegularExpression("(;.*)")
-_LABEL_DEF_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:.*")
+_LABEL_DEF_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:")
 _CONST_LABEL_CALL_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)")
 
 
@@ -80,6 +80,7 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
                 # skip the 0th capture group, which is the whole match
                 for captured_index in range(1, match.lastCapturedIndex() + 1):
                     if expression == _CONST_LABEL_CALL_REGEX:
+
                         if match.capturedView(captured_index) in [
                             self.const_under_cursor,
                             self.label_under_cursor,
@@ -97,15 +98,15 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
                                     CLICKABLE_LABEL_COLOR.toCharFormat(),
                                 )
 
-                                continue
-                        else:
-                            const_or_label = match.capturedView(captured_index).strip()
+                            continue
 
-                            if const_or_label in self.named_value_finder.constants:
-                                color = _CONST_COLOR
-                            elif const_or_label in self.named_value_finder.labels:
-                                color = _LABEL_COLOR
-                            else:
-                                continue
+                        const_or_label = match.capturedView(captured_index).strip()
+
+                        if const_or_label in self.named_value_finder.constants:
+                            color = _CONST_COLOR
+                        elif const_or_label in self.named_value_finder.labels:
+                            color = _LABEL_COLOR
+                        else:
+                            continue
 
                     self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
