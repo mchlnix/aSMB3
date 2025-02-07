@@ -1,11 +1,14 @@
 from pathlib import Path
 
+from PySide6.QtCore import QSize
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
 from foundry import icon
+from foundry.data_source.assembly_parser import AssemblyParser
 from foundry.gui.FoundryMainWindow import TOOLBAR_ICON_SIZE
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
+from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.tab_widget import TabWidget
 
 
@@ -19,7 +22,12 @@ class MainWindow(QMainWindow):
         self._root_path = Path("/home/michael/Gits/smb3")
         # self._get_disasm_folder()
 
-        self._central_widget = TabWidget(self)
+        assembly_parser = AssemblyParser(self._root_path)
+        parse_call = assembly_parser.parse()
+
+        self._progress_dialog = ParsingProgressDialog(None, parse_call)
+
+        self._central_widget = TabWidget(self, assembly_parser)
         self.setCentralWidget(self._central_widget)
 
         self._set_up_toolbars()
@@ -59,6 +67,9 @@ class MainWindow(QMainWindow):
 
         exit_action = self.file_menu.addAction("Exit")
         exit_action.triggered.connect(self.close)
+
+    def sizeHint(self):
+        return QSize(1800, 1600)
 
     def _get_disasm_folder(self):
         dis_asm_folder = QFileDialog.getExistingDirectory(self, "Select Disassembly Directory")

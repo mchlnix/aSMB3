@@ -1,5 +1,5 @@
 from PySide6.QtCore import QRegularExpression
-from PySide6.QtGui import QColor, QSyntaxHighlighter
+from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat
 
 from foundry.data_source.assembly_parser import _is_instruction
 
@@ -11,6 +11,7 @@ _STRING_REGEX = QRegularExpression('("[^"]*")')
 _COMMENT_REGEX = QRegularExpression("(;.*)")
 _LABEL_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:.*")
 
+
 _DEC_NUMBER_COLOR = QColor.fromRgb(255, 0, 0)
 _HEX_NUMBER_COLOR = QColor.fromRgb(150, 150, 0)
 _BIN_NUMBER_COLOR = QColor.fromRgb(0, 200, 200)
@@ -20,6 +21,10 @@ _COMMENT_COLOR = QColor.fromRgb(77, 153, 0)
 _LABEL_COLOR = QColor.fromRgb(153, 0, 153)
 
 _INSTRUCTION_COLOR = QColor.fromRgb(255, 0, 0)
+
+clickable_format = QTextCharFormat()
+clickable_format.setForeground(_CONST_COLOR)
+clickable_format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline)
 
 _REGEXS = [
     _DEC_NUMBER_REGEX,
@@ -46,7 +51,9 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
         super(AsmSyntaxHighlighter, self).__init__(parent)
 
-    def highlightBlock(self, line: str):
+        self.const_under_cursor = ""
+
+    def highlightBlock(self, line: str, clickable=False):
         if _is_instruction(line):
             start = 0
             end = line.find(" ", start)
@@ -61,4 +68,12 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
 
                 # skip the 0th capture group, which is the whole match
                 for captured_index in range(1, match.lastCapturedIndex() + 1):
-                    self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
+                    if expression == _CONST_REGEX and match.capturedView(captured_index) == self.const_under_cursor:
+                        self.setFormat(
+                            match.capturedStart(captured_index),
+                            match.capturedLength(captured_index),
+                            clickable_format.toCharFormat(),
+                        )
+                    else:
+                        self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
+                        print(line)
