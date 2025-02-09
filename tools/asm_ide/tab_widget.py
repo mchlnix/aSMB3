@@ -16,6 +16,11 @@ class TabWidget(QTabWidget):
     :param Path The relative path of the document the redirect points to.
     :param int The line number the redirect points to.
     """
+    text_position_clicked = Signal(Path, int)
+    """
+    :param Path The relative path of the document the position was changed in.
+    :param int The block index the position was changed to.
+    """
     document_modified = Signal(bool, bool)
     """
     :param bool True if the current document is modified.
@@ -39,16 +44,16 @@ class TabWidget(QTabWidget):
         self.tabCloseRequested.connect(self._close_tab)
         self.currentChanged.connect(self._react_to_modification)
 
-    def open_or_switch_file(self, file_path: Path):
-        if file_path in self._path_to_tab:
-            tab_index = self._path_to_tab.index(file_path)
+    def open_or_switch_file(self, abs_path: Path):
+        if abs_path in self._path_to_tab:
+            tab_index = self._path_to_tab.index(abs_path)
 
             self.setCurrentIndex(tab_index)
 
         else:
-            self._load_disasm_file(file_path)
+            self._load_asm_file(abs_path)
 
-    def _load_disasm_file(self, path: Path) -> None:
+    def _load_asm_file(self, path: Path) -> None:
         code_area = CodeArea(self, self._named_value_finder)
         code_area.redirect_clicked.connect(self.redirect_clicked.emit)
 
@@ -59,7 +64,10 @@ class TabWidget(QTabWidget):
 
         code_area.text_document.setPlainText(path.read_text())
         code_area.text_document.setModified(False)
+
         code_area.text_document.modificationChanged.connect(self._react_to_modification)
+        code_area.text_position_clicked.connect(lambda index: self.text_position_clicked.emit(path, index))
+
         code_area.moveCursor(QTextCursor.Start)
 
         self.setCurrentIndex(tab_index)
@@ -95,6 +103,16 @@ class TabWidget(QTabWidget):
         )
 
         current_code_area.setTextCursor(current_cursor)
+
+    def scroll_to_position(self, block_index: int):
+        current_code_area: CodeArea = self.currentWidget()
+        current_cursor = current_code_area.textCursor()
+
+        current_cursor.setPosition(block_index, QTextCursor.MoveMode.MoveAnchor)
+
+        self.blockSignals(True)
+        current_code_area.setTextCursor(current_cursor)
+        self.blockSignals(False)
 
     def _react_to_modification(self):
         # no open documents

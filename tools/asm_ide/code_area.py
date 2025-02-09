@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QFont, QTextBlock, QTextCursor, QTextDocument
+from PySide6.QtGui import QFont, QMouseEvent, Qt, QTextBlock, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QTextEdit, QToolTip
 
 from foundry import ctrl_is_pressed
@@ -10,7 +10,15 @@ from tools.asm_ide.named_value_finder import NamedValueFinder
 
 
 class CodeArea(QTextEdit):
+    text_position_clicked = Signal(int)
+    """
+    :param The block index the cursor was put to.
+    """
     redirect_clicked = Signal(Path, int)
+    """
+    :param Path The relative file path to go to.
+    :param int The line number to go to.
+    """
 
     def __init__(self, parent, named_value_finder: NamedValueFinder):
         super(CodeArea, self).__init__(parent)
@@ -77,6 +85,17 @@ class CodeArea(QTextEdit):
 
         else:
             self.setToolTip(None)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        text_cursor_at_click = self.cursorForPosition(event.pos())
+
+        cursor_pos_changed = text_cursor_at_click.position() != self.textCursor().position()
+        navigated_by_mouse = event.buttons() & (Qt.MouseButton.BackButton | Qt.MouseButton.ForwardButton)
+
+        if cursor_pos_changed and not navigated_by_mouse:
+            self.text_position_clicked.emit(text_cursor_at_click.position())
+
+        return super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, e):
         text_cursor = self.cursorForPosition(e.pos())
