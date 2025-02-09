@@ -1,16 +1,29 @@
+from pathlib import Path
+
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QToolBar, QToolButton
 
 from foundry import icon
 from foundry.gui.FoundryMainWindow import TOOLBAR_ICON_SIZE
+from tools.asm_ide.text_position_stack import TextPositionStack
 
 
 class MenuToolbar(QToolBar):
+    position_change_requested = Signal(Path, int)
+    """
+    :param Path The path of the file to jump to.
+    :param int The position in the text to jump to.
+    """
+
     def __init__(self, parent=None):
         super(MenuToolbar, self).__init__(parent)
 
         self.setIconSize(TOOLBAR_ICON_SIZE)
         self.setMovable(False)
 
+        self._position_stack = TextPositionStack()
+
+        # Save Button
         self.save_current_file_action = self.addAction("Save Current File")
         self.save_current_file_action.setIcon(icon("save.svg"))
 
@@ -22,8 +35,50 @@ class MenuToolbar(QToolBar):
 
         self.update_save_status(False, False)
 
+        self.addSeparator()
+
+        # Navigation Buttons
+        self.go_back_action = self.addAction("Back")
+        self.go_back_action.setIcon(icon("arrow-left.svg"))
+        self.go_back_action.triggered.connect(self._go_back)
+
+        self.go_forward_action = self.addAction("Forward")
+        self.go_forward_action.setIcon(icon("arrow-right.svg"))
+        self.go_forward_action.triggered.connect(self._go_forward)
+
+        self._update_navigation_buttons()
+
     def update_save_status(self, current_document_is_modified: bool, any_document_is_modified: bool):
         self.save_current_file_action.setEnabled(current_document_is_modified)
         self.save_all_files_action.setEnabled(any_document_is_modified)
 
         self._save_button.setEnabled(any_document_is_modified)
+
+    def push_position(self, abs_path: Path, block_index: int):
+        self._position_stack.push(abs_path, block_index)
+
+        self._update_navigation_buttons()
+
+    def _go_back(self):
+        if self._position_stack.is_at_the_beginning():
+            return
+
+        file_path, block_index = self._position_stack.go_back()
+
+        self.position_change_requested.emit(file_path, block_index)
+
+        self._update_navigation_buttons()
+
+    def _go_forward(self):
+        if self._position_stack.is_at_the_end():
+            return
+
+        file_path, block_index = self._position_stack.go_forward()
+
+        self.position_change_requested.emit(file_path, block_index)
+
+        self._update_navigation_buttons()
+
+    def _update_navigation_buttons(self):
+        self.go_back_action.setEnabled(not self._position_stack.is_at_the_beginning())
+        self.go_forward_action.setEnabled(not self._position_stack.is_at_the_end())
