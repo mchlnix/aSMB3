@@ -14,23 +14,29 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("ASM IDE")
+        self.setWindowTitle("ASMB3 IDE")
         self.setMouseTracking(True)
 
         # remove this when shipping
         self._root_path = Path("/home/michael/Gits/smb3")
         # self._get_disasm_folder()
 
+        self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
+
         progress_dialog = ParsingProgressDialog(self._root_path)
 
-        self._central_widget = TabWidget(self, progress_dialog.named_value_finder)
-        self._central_widget.redirect_clicked.connect(self.follow_redirect)
-        self.setCentralWidget(self._central_widget)
+        self._tab_widget = TabWidget(self, progress_dialog.named_value_finder)
+        self._tab_widget.redirect_clicked.connect(self.follow_redirect)
+
+        QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp), self, self._tab_widget.to_previous_tab)
+        QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown), self, self._tab_widget.to_next_tab)
+
+        self.setCentralWidget(self._tab_widget)
 
         self._set_up_toolbars()
         self._set_up_menubar()
 
-        self._central_widget.open_or_switch_file(self._root_path / "smb3.asm")
+        self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
 
     def _set_up_toolbars(self):
         self._set_up_menu_toolbar()
@@ -38,7 +44,7 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
 
         file_tree_view = AsmFileTreeView(self._root_path)
-        file_tree_view.file_clicked.connect(self._central_widget.open_or_switch_file)
+        file_tree_view.file_clicked.connect(self._tab_widget.open_or_switch_file)
 
         toolbar.addWidget(file_tree_view)
 
@@ -47,11 +53,11 @@ class MainWindow(QMainWindow):
     def _set_up_menu_toolbar(self):
         toolbar = MenuToolbar(self)
 
-        self._central_widget.document_modified.connect(toolbar.update_save_status)
-        self._central_widget.text_position_clicked.connect(toolbar.push_position)
+        self._tab_widget.document_modified.connect(toolbar.update_save_status)
+        self._tab_widget.text_position_clicked.connect(toolbar.push_position)
 
-        toolbar.save_current_file_action.triggered.connect(self._central_widget.save_current_file)
-        toolbar.save_all_files_action.triggered.connect(self._central_widget.save_all_files)
+        toolbar.save_current_file_action.triggered.connect(self._tab_widget.save_current_file)
+        toolbar.save_all_files_action.triggered.connect(self._tab_widget.save_all_files)
 
         toolbar.position_change_requested.connect(self._move_to_position)
 
@@ -77,7 +83,7 @@ class MainWindow(QMainWindow):
         print("before redirect")
         self._move_to_line(relative_file_path, line_no)
 
-        text_cursor = self._central_widget.currentWidget().textCursor()
+        text_cursor = self._tab_widget.currentWidget().textCursor()
         text_cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.MoveAnchor)
         text_cursor.movePosition(QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.MoveAnchor, n=line_no - 1)
 
@@ -85,12 +91,12 @@ class MainWindow(QMainWindow):
         self._menu_toolbar.push_position(self._root_path / relative_file_path, text_cursor.position())
 
     def _move_to_line(self, relative_file_path: Path, line_no: int):
-        self._central_widget.open_or_switch_file(self._root_path / relative_file_path)
-        self._central_widget.scroll_to_line(line_no)
+        self._tab_widget.open_or_switch_file(self._root_path / relative_file_path)
+        self._tab_widget.scroll_to_line(line_no)
 
     def _move_to_position(self, abs_path: Path, block_index: int):
-        self._central_widget.open_or_switch_file(abs_path)
-        self._central_widget.scroll_to_position(block_index)
+        self._tab_widget.open_or_switch_file(abs_path)
+        self._tab_widget.scroll_to_position(block_index)
 
     def sizeHint(self):
         return QSize(1800, 1600)
