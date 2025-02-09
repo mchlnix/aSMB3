@@ -4,9 +4,8 @@ from PySide6.QtCore import QSize
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
-from foundry import icon
-from foundry.gui.FoundryMainWindow import TOOLBAR_ICON_SIZE
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
+from tools.asm_ide.menu_toolbar import MenuToolbar
 from tools.asm_ide.named_value_finder import NamedValueFinder
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.tab_widget import TabWidget
@@ -52,12 +51,11 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
 
     def _set_up_menu_toolbar(self):
-        toolbar = QToolBar()
-        toolbar.setIconSize(TOOLBAR_ICON_SIZE)
-        toolbar.setMovable(False)
+        toolbar = MenuToolbar(self)
+        self._central_widget.document_modified.connect(toolbar.update_save_status)
+        toolbar.save_current_file_action.triggered.connect(self._central_widget.save_current_file)
+        toolbar.save_all_files_action.triggered.connect(self._central_widget.save_all_files)
 
-        save_action = toolbar.addAction("Save ROM")
-        save_action.setIcon(icon("save.svg"))
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
 
     def _set_up_menubar(self):
@@ -85,3 +83,8 @@ class MainWindow(QMainWindow):
         dis_asm_root_path = Path(dis_asm_folder)
         if not dis_asm_root_path.is_dir():
             return
+
+        self._root_path = dis_asm_root_path
+
+        # todo check that there is an smb3 file
+        # only parse the PRG files mentioned there
