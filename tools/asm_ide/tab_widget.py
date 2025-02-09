@@ -157,6 +157,18 @@ class TabWidget(QTabWidget):
         self._path_to_tab.pop(index)
         self.removeTab(index)
 
+    def to_next_tab(self):
+        if self.currentIndex() == self.count() - 1:
+            return
+
+        self.setCurrentIndex(self.currentIndex() + 1)
+
+    def to_previous_tab(self):
+        if self.currentIndex() < 1:
+            return
+
+        self.setCurrentIndex(self.currentIndex() - 1)
+
     def currentWidget(self) -> CodeArea:
         return super().currentWidget()
 
