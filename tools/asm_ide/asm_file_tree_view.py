@@ -26,6 +26,9 @@ class AsmFileTreeView(QTreeView):
 
         self.setRootIndex(file_system_model.setRootPath(str(self._root_path)))
 
+        prg_index = file_system_model.index(str(self._root_path / "PRG"), 0)
+        self.expand(prg_index)
+
         self.doubleClicked.connect(self.on_file_clicked)
 
     def on_file_clicked(self, model_index: QModelIndex):
