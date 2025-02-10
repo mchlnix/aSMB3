@@ -24,9 +24,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("ASMB3 IDE")
         self.setMouseTracking(True)
 
-        # remove this when shipping
-        self._root_path = Path("/home/michael/Gits/smb3")
-        # self._get_disassembly_root()
+        self._tab_widget = None
+
+        self._on_open()
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
 
         self.file_menu = self.menubar.addMenu("File")
         load_disassembly_action = self.file_menu.addAction("Load Disassembly")
-        load_disassembly_action.triggered.connect(self._get_disassembly_root)
+        load_disassembly_action.triggered.connect(self._on_open)
 
         self.file_menu.addSeparator()
 
@@ -111,17 +111,35 @@ class MainWindow(QMainWindow):
     def sizeHint(self):
         return QSize(1800, 1600)
 
-    def _get_disassembly_root(self):
+    def _on_open(self):
+        if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():
+            return False
+
+        # TODO: take out before stuff
+        path = Path("/home/michael/Gits/smb3")
+        # path = self._get_disassembly_root()
+
+        if path is None:
+            return False
+
+        self._root_path = path
+
+        if self._tab_widget:
+            self._tab_widget.clear()
+            self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
+
+        # todo only parse the PRG files mentioned in smb3.asm
+        return True
+
+    def _get_disassembly_root(self) -> Path | None:
         dis_asm_folder = QFileDialog.getExistingDirectory(self, "Select Disassembly Directory")
 
         dis_asm_root_path = Path(dis_asm_folder)
-        if not dis_asm_root_path.is_dir():
-            return
 
-        self._root_path = dis_asm_root_path
+        if not dis_asm_root_path.is_dir() or not (dis_asm_root_path / "smb3.asm").exists():
+            return None
 
-        # todo check that there is an smb3 file
-        # only parse the PRG files mentioned there
+        return dis_asm_root_path
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.buttons() & Qt.MouseButton.ForwardButton:
