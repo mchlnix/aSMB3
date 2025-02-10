@@ -26,6 +26,11 @@ class TabWidget(QTabWidget):
     :param bool True if the current document is modified.
     :param bool True if any open document is modified.
     """
+    undo_redo_changed = Signal(bool, bool)
+    """
+    :param bool True if the current document has something to undo.
+    :param bool True if the current document has something to redo.
+    """
 
     tabCloseRequested: SignalInstance(int)
 
@@ -42,7 +47,7 @@ class TabWidget(QTabWidget):
 
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self._close_tab)
-        self.currentChanged.connect(self._react_to_modification)
+        self.currentChanged.connect(self._on_current_tab_changed)
 
     def open_or_switch_file(self, abs_path: Path):
         if abs_path in self._path_to_tab:
@@ -66,6 +71,8 @@ class TabWidget(QTabWidget):
         code_area.text_document.setModified(False)
 
         code_area.text_document.modificationChanged.connect(self._react_to_modification)
+        code_area.text_document.contentsChanged.connect(self._emit_undo_redo_state)
+
         code_area.text_position_clicked.connect(lambda index: self.text_position_clicked.emit(path, index))
 
         code_area.moveCursor(QTextCursor.Start)
@@ -113,6 +120,10 @@ class TabWidget(QTabWidget):
         self.blockSignals(True)
         current_code_area.setTextCursor(current_cursor)
         self.blockSignals(False)
+
+    def _on_current_tab_changed(self):
+        self._emit_undo_redo_state()
+        self._react_to_modification()
 
     def _react_to_modification(self):
         # no open documents
@@ -169,8 +180,40 @@ class TabWidget(QTabWidget):
 
         self.setCurrentIndex(self.currentIndex() - 1)
 
-    def currentWidget(self) -> CodeArea:
+    def on_undo(self):
+        current_code_area: CodeArea | None = self.currentWidget()
+
+        if current_code_area is None:
+            return
+
+        if current_code_area.text_document.isUndoAvailable():
+            current_code_area.undo()
+
+        self._emit_undo_redo_state()
+
+    def on_redo(self):
+        current_code_area: CodeArea | None = self.currentWidget()
+
+        if current_code_area is None:
+            return
+
+        if current_code_area.text_document.isRedoAvailable():
+            current_code_area.redo()
+
+        self._emit_undo_redo_state()
+
+    def _emit_undo_redo_state(self):
+        if self.currentWidget() is None:
+            self.undo_redo_changed.emit(False, False)
+            return
+
+        undo_available = self.currentWidget().text_document.isUndoAvailable()
+        redo_available = self.currentWidget().text_document.isRedoAvailable()
+
+        self.undo_redo_changed.emit(undo_available, redo_available)
+
+    def currentWidget(self) -> CodeArea | None:
         return super().currentWidget()
 
-    def widget(self, index) -> CodeArea:
+    def widget(self, index) -> CodeArea | None:
         return super().widget(index)
