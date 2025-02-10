@@ -3,6 +3,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QPoint, QRect, QSize, Signal
 from PySide6.QtGui import (
+    QBrush,
     QColor,
     QFont,
     QFontMetrics,
@@ -11,12 +12,15 @@ from PySide6.QtGui import (
     QPaintEvent,
     Qt,
     QTextBlock,
+    QTextCharFormat,
     QTextCursor,
     QTextDocument,
+    QTextFormat,
 )
 from PySide6.QtWidgets import (
     QPlainTextDocumentLayout,
     QPlainTextEdit,
+    QTextEdit,
     QToolTip,
     QWidget,
 )
@@ -39,12 +43,6 @@ class LineNumberArea(QWidget):
     def update_text_measurements(self):
         font_metrics = QFontMetrics(self.editor.document().defaultFont())
         self._line_no_width = font_metrics.horizontalAdvance(self.no_of_digits * "9")
-        print(
-            font_metrics.lineSpacing(),
-            font_metrics.height(),
-            font_metrics.leading(),
-            font_metrics.boundingRect("Gg").height(),
-        )
         self._line_no_height = font_metrics.lineSpacing()
 
         self.editor.setViewportMargins(self.sizeHint().width(), 0, 0, 0)
@@ -103,6 +101,7 @@ class CodeArea(QPlainTextEdit):
 
         self._named_value_finder = named_value_finder
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        self.setMouseTracking(True)
 
         self.text_document = QTextDocument()
         self.text_document.setDocumentLayout(QPlainTextDocumentLayout(self.text_document))
@@ -120,6 +119,19 @@ class CodeArea(QPlainTextEdit):
         self._line_number_area = LineNumberArea(self)
         self.blockCountChanged.connect(self._line_number_area.update_text_measurements)
 
+        self.cursorPositionChanged.connect(self._highlight_current_number)
+
+    def _highlight_current_number(self):
+        current_line_selection = QTextEdit.ExtraSelection()
+
+        line_highligh_format = QTextCharFormat()
+        line_highligh_format.setBackground(QBrush(QColor(255, 255, 153)))
+
+        current_line_selection.cursor = self.textCursor()
+        current_line_selection.format = line_highligh_format
+        current_line_selection.format.setProperty(QTextFormat.FullWidthSelection, True)
+        self.setExtraSelections([current_line_selection])
+
     def paintEvent(self, e: QPaintEvent):
         self._line_number_area.repaint()
         return super().paintEvent(e)
@@ -131,7 +143,7 @@ class CodeArea(QPlainTextEdit):
         word = text_cursor.selectedText().strip()
 
         if word == self.last_word:
-            return
+            return super().mouseMoveEvent(e)
 
         # reset potentially old const highlighting
         self.last_word = ""
@@ -174,6 +186,8 @@ class CodeArea(QPlainTextEdit):
         else:
             self.setToolTip(None)
 
+        return super().mouseMoveEvent(e)
+
     def mousePressEvent(self, event: QMouseEvent):
         text_cursor_at_click = self.cursorForPosition(event.pos())
 
@@ -199,8 +213,10 @@ class CodeArea(QPlainTextEdit):
             return super().mouseReleaseEvent(e)
 
         if not ctrl_is_pressed():
-            return
+            return super().mouseReleaseEvent(e)
 
         _, _, relative_file_path, line_no = info
 
         self.redirect_clicked.emit(relative_file_path, line_no)
+
+        return super().mouseReleaseEvent(e)
