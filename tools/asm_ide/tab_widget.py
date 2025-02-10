@@ -233,6 +233,11 @@ class TabWidget(QTabWidget):
 
         return self._ask_for_close_without_saving(modified_file_names)
 
+    def clear(self):
+        self._path_to_tab.clear()
+
+        return super().clear()
+
     @staticmethod
     def _ask_for_close_without_saving(file_names: list[str]):
         file_name_list = "\n".join(file_names)
