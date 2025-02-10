@@ -1,7 +1,7 @@
 from math import floor, log10
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, QRect, QSize, Signal
+from PySide6.QtCore import QPoint, QRect, QSize, Signal, SignalInstance
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -60,7 +60,7 @@ class LineNumberArea(QWidget):
     def paintEvent(self, event: QPaintEvent):
         self.paint_area(event)
 
-    def paint_area(self, paint_event: QPaintEvent):
+    def paint_area(self, _):
         painter = QPainter(self)
         painter.setFont(self.editor.font)
         painter.setPen(QColor(150, 150, 150))
@@ -99,6 +99,8 @@ class CodeArea(QPlainTextEdit):
     :param Path The relative file path to go to.
     :param int The line number to go to.
     """
+    blockCountChanged: SignalInstance(int)
+    cursorPositionChanged: SignalInstance()
 
     def __init__(self, parent, named_value_finder: NamedValueFinder):
         super(CodeArea, self).__init__(parent)
@@ -128,11 +130,11 @@ class CodeArea(QPlainTextEdit):
     def _highlight_current_number(self):
         current_line_selection = QTextEdit.ExtraSelection()
 
-        line_highligh_format = QTextCharFormat()
-        line_highligh_format.setBackground(QBrush(QColor(255, 255, 153)))
+        line_highlight_format = QTextCharFormat()
+        line_highlight_format.setBackground(QBrush(QColor(255, 255, 153)))
 
         current_line_selection.cursor = self.textCursor()
-        current_line_selection.format = line_highligh_format
+        current_line_selection.format = line_highlight_format
         current_line_selection.format.setProperty(QTextFormat.FullWidthSelection, True)
         self.setExtraSelections([current_line_selection])
 
@@ -158,39 +160,33 @@ class CodeArea(QPlainTextEdit):
             self.syntax_highlighter.rehighlightBlock(self.last_block)
             self.last_block = None
 
-        # todo: dedup
-        if word in self._named_value_finder.constants:
-            self.last_word = word
-
-            name, value, file, line_no = self._named_value_finder.constants[word]
-
-            tooltip = QToolTip()
-            tooltip.setFont(QFont("Monospace", 14))
-
-            tooltip.showText(e.globalPos(), f"{file}+{line_no}: {name} = {value}", self)
-            self.syntax_highlighter.const_under_cursor = word
-
-            self.last_block = text_cursor.block()
-            self.syntax_highlighter.rehighlightBlock(self.last_block)
-
-        elif word in self._named_value_finder.labels:
-            self.last_word = word
-
-            name, value, file, line_no = self._named_value_finder.labels[word]
-
-            tooltip = QToolTip()
-            tooltip.setFont(QFont("Monospace", 14))
-
-            tooltip.showText(e.globalPos(), f"{file}+{line_no}: {name}: {value}", self)
-            self.syntax_highlighter.label_under_cursor = word
-
-            self.last_block = text_cursor.block()
-            self.syntax_highlighter.rehighlightBlock(self.last_block)
-
-        else:
-            self.setToolTip(None)
+        self._update_tooltip(e, text_cursor, word)
 
         return super().mouseMoveEvent(e)
+
+    def _update_tooltip(self, e, text_cursor, word):
+        word_is_a_constant = word in self._named_value_finder.constants
+        word_is_a_label = word in self._named_value_finder.labels
+
+        if not (word_is_a_constant or word_is_a_label):
+            self.setToolTip(None)
+            return
+
+        self.last_word = word
+        tooltip = QToolTip()
+        tooltip.setFont(QFont("Monospace", 14))
+
+        if word_is_a_constant:
+            name, value, file, line_no = self._named_value_finder.constants[word]
+            self.syntax_highlighter.const_under_cursor = word
+        else:
+            name, value, file, line_no = self._named_value_finder.labels[word]
+            self.syntax_highlighter.label_under_cursor = word
+
+        tooltip.showText(e.globalPos(), f"{file}+{line_no}: {name} = {value}", self)
+
+        self.last_block = text_cursor.block()
+        self.syntax_highlighter.rehighlightBlock(self.last_block)
 
     def mousePressEvent(self, event: QMouseEvent):
         text_cursor_at_click = self.cursorForPosition(event.pos())
