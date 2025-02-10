@@ -84,6 +84,10 @@ class LineNumberArea(QWidget):
 
         painter.end()
 
+    def wheelEvent(self, event):
+        # sends the wheel event on the line number area to the editor, making it appear as if both scroll together
+        self.editor.wheelEvent(event)
+
 
 class CodeArea(QPlainTextEdit):
     text_position_clicked = Signal(int)
