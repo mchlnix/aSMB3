@@ -15,6 +15,6 @@ class TabBar(QTabBar):
             if 0 <= tab_index <= self.count():
                 self.middle_click_on.emit(tab_index)
 
-                return
+                return super().mouseReleaseEvent(event)
 
         return super().mouseReleaseEvent(event)
