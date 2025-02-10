@@ -55,6 +55,9 @@ def _is_org_directive(line: str):
 
 
 def _is_generic_directive(line: str):
+    if not line:
+        return False
+
     directive = line.split()[0]
 
     return directive.upper() in DIRECTIVES

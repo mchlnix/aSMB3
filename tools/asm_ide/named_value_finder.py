@@ -13,6 +13,9 @@ class NamedValue(NamedTuple):
 
 _CONST_REGEX = QRegularExpression("([A-Za-z][A-za-z0-9_]*)\s*\=\s*(\$[0-9A-F]+|\%[0-1]+|[0-9]+)")
 _LABEL_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:\s*(.*)")
+_RAM_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:\s*(\.ds.*)")
+
+# todo keep track of macros
 
 
 class NamedValueFinder:
@@ -20,6 +23,7 @@ class NamedValueFinder:
         self.root_path = root_path
 
         self.constants: dict[str, NamedValue] = dict()
+        self.ram_variables: dict[str, NamedValue] = dict()
         self.labels: dict[str, NamedValue] = dict()
 
     def parse_files(self):
@@ -46,38 +50,29 @@ class NamedValueFinder:
     def _parse_file(self, file_path: Path):
         with file_path.open("r") as f:
             for line_no, line in enumerate(f.readlines(), 1):
-                match_iterator = _CONST_REGEX.globalMatch(line)
+                semi_colon_index = line.find(";")
 
-                while match_iterator.hasNext():
-                    match = match_iterator.next()
+                for regex, bucket in zip(
+                    [_CONST_REGEX, _RAM_REGEX, _LABEL_REGEX], [self.constants, self.ram_variables, self.labels]
+                ):
+                    match_iterator = regex.globalMatch(line)
 
-                    const_name = match.capturedView(1)
-                    const_value = match.capturedView(2)
+                    we_matched = match_iterator.hasNext()
 
-                    semi_colon_index = line.find(";")
+                    while match_iterator.hasNext():
+                        match = match_iterator.next()
 
-                    if -1 < semi_colon_index < match.capturedStart(1):
-                        # label found inside a comment
-                        continue
+                        matched_name = match.capturedView(1)
+                        matched_value = match.capturedView(2)
 
-                    self.constants[const_name] = NamedValue(
-                        const_name, const_value, file_path.relative_to(self.root_path), line_no
-                    )
+                        if -1 < semi_colon_index < match.capturedStart(1):
+                            # match found inside a comment
+                            continue
 
-                match_iterator = _LABEL_REGEX.globalMatch(line)
+                        bucket.__setitem__(
+                            matched_name,
+                            NamedValue(matched_name, matched_value, file_path.relative_to(self.root_path), line_no),
+                        )
 
-                while match_iterator.hasNext():
-                    match = match_iterator.next()
-
-                    label_name = match.capturedView(1)
-                    label_value = match.capturedView(2)
-
-                    semi_colon_index = line.find(";")
-
-                    if -1 < semi_colon_index < match.capturedStart(1):
-                        # label found inside a comment
-                        continue
-
-                    self.labels[label_name] = NamedValue(
-                        label_name, label_value, file_path.relative_to(self.root_path), line_no
-                    )
+                    if we_matched:
+                        break

@@ -29,6 +29,8 @@ from foundry import ctrl_is_pressed
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.named_value_finder import NamedValueFinder
 
+_LINE_NO_COLOR = QColor.fromRgb(0x2C91AF)
+
 
 class LineNumberArea(QWidget):
     MARGIN_RIGHT = 10
@@ -62,8 +64,8 @@ class LineNumberArea(QWidget):
 
     def paint_area(self, _):
         painter = QPainter(self)
-        painter.setFont(self.editor.font)
-        painter.setPen(QColor(150, 150, 150))
+        painter.setFont(self.editor.document().defaultFont())
+        painter.setPen(_LINE_NO_COLOR)
 
         block = self.editor.firstVisibleBlock()
         top = self.editor.blockBoundingGeometry(block).translated(self.editor.contentOffset()).top() + 1
@@ -80,6 +82,7 @@ class LineNumberArea(QWidget):
 
             block = block.next()
 
+        painter.setPen(QColor(150, 150, 150))
         painter.drawLine(QPoint(self.width() - 1, 0), QPoint(self.width() - 1, self.height()))
 
         painter.end()
@@ -116,8 +119,9 @@ class CodeArea(QPlainTextEdit):
         self.syntax_highlighter = AsmSyntaxHighlighter(self, named_value_finder)
         self.syntax_highlighter.setDocument(self.text_document)
 
-        self.font = QFont("Monospace", 14)
-        self.text_document.setDefaultFont(self.font)
+        self._font = QFont("Monospace", 14)
+        self._font.setBold(True)
+        self.text_document.setDefaultFont(self._font)
 
         self.last_block: QTextBlock | None = None
         self.last_word = ""
@@ -154,6 +158,7 @@ class CodeArea(QPlainTextEdit):
         # reset potentially old const highlighting
         self.last_word = ""
         self.syntax_highlighter.const_under_cursor = ""
+        self.syntax_highlighter.ram_variable_under_cursor = ""
         self.syntax_highlighter.label_under_cursor = ""
 
         if self.last_block is not None:
@@ -166,9 +171,10 @@ class CodeArea(QPlainTextEdit):
 
     def _update_tooltip(self, e, text_cursor, word):
         word_is_a_constant = word in self._named_value_finder.constants
+        word_is_a_ram_variable = word in self._named_value_finder.ram_variables
         word_is_a_label = word in self._named_value_finder.labels
 
-        if not (word_is_a_constant or word_is_a_label):
+        if not (word_is_a_constant or word_is_a_ram_variable or word_is_a_label):
             self.setToolTip(None)
             return
 
@@ -179,6 +185,9 @@ class CodeArea(QPlainTextEdit):
         if word_is_a_constant:
             name, value, file, line_no = self._named_value_finder.constants[word]
             self.syntax_highlighter.const_under_cursor = word
+        elif word_is_a_ram_variable:
+            name, value, file, line_no = self._named_value_finder.ram_variables[word]
+            self.syntax_highlighter.ram_variable_under_cursor = word
         else:
             name, value, file, line_no = self._named_value_finder.labels[word]
             self.syntax_highlighter.label_under_cursor = word
