@@ -3,7 +3,7 @@ from typing import Generator
 
 from PySide6.QtCore import Signal, SignalInstance
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QTabWidget
+from PySide6.QtWidgets import QMessageBox, QTabWidget
 
 from tools.asm_ide.code_area import CodeArea
 from tools.asm_ide.named_value_finder import NamedValueFinder
@@ -33,12 +33,13 @@ class TabWidget(QTabWidget):
     """
 
     tabCloseRequested: SignalInstance(int)
+    currentChanged: SignalInstance(bool)
 
     def __init__(self, parent, named_value_finder: NamedValueFinder):
         super(TabWidget, self).__init__(parent)
         self.setMouseTracking(True)
 
-        self._path_to_tab = []
+        self._path_to_tab: list[Path] = []
         self._named_value_finder = named_value_finder
 
         tab_bar = TabBar(self)
@@ -164,7 +165,12 @@ class TabWidget(QTabWidget):
         for tab_index in range(self.count()):
             yield self.widget(tab_index)
 
-    def _close_tab(self, index):
+    def _close_tab(self, index: int):
+        path_of_tab = self._path_to_tab[index]
+
+        if not self._ask_for_close_without_saving([str(path_of_tab)]):
+            return
+
         self._path_to_tab.pop(index)
         self.removeTab(index)
 
@@ -217,3 +223,28 @@ class TabWidget(QTabWidget):
 
     def widget(self, index) -> CodeArea | None:
         return super().widget(index)
+
+    def ask_to_quit_all_tabs_without_saving(self):
+        modified_file_names: list[str] = [
+            self.tabText(tab_index).removesuffix(" *")
+            for tab_index, code_area in enumerate(self._iter_widgets())
+            if code_area.document().isModified()
+        ]
+
+        return self._ask_for_close_without_saving(modified_file_names)
+
+    @staticmethod
+    def _ask_for_close_without_saving(file_names: list[str]):
+        file_name_list = "\n".join(file_names)
+
+        if not file_name_list:
+            return True
+
+        ret_button = QMessageBox.warning(
+            None,
+            "Unsaved Changes",
+            f"There are unsaved changes in:\n\n{file_name_list}\n\nDo you want to proceed without saving?",
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes,
+        )
+
+        return ret_button == QMessageBox.StandardButton.Yes

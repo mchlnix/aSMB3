@@ -1,7 +1,14 @@
 from pathlib import Path
 
 from PySide6.QtCore import QSize
-from PySide6.QtGui import QKeySequence, QMouseEvent, QShortcut, Qt, QTextCursor
+from PySide6.QtGui import (
+    QCloseEvent,
+    QKeySequence,
+    QMouseEvent,
+    QShortcut,
+    Qt,
+    QTextCursor,
+)
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
@@ -19,7 +26,7 @@ class MainWindow(QMainWindow):
 
         # remove this when shipping
         self._root_path = Path("/home/michael/Gits/smb3")
-        # self._get_disasm_folder()
+        # self._get_disassembly_root()
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
@@ -76,8 +83,8 @@ class MainWindow(QMainWindow):
         self.menubar = self.menuBar()
 
         self.file_menu = self.menubar.addMenu("File")
-        load_disasm_action = self.file_menu.addAction("Load Disassembly")
-        load_disasm_action.triggered.connect(self._get_disasm_folder)
+        load_disassembly_action = self.file_menu.addAction("Load Disassembly")
+        load_disassembly_action.triggered.connect(self._get_disassembly_root)
 
         self.file_menu.addSeparator()
 
@@ -85,14 +92,12 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
 
     def follow_redirect(self, relative_file_path: Path, line_no: int):
-        print("before redirect")
         self._move_to_line(relative_file_path, line_no)
 
         text_cursor = self._tab_widget.currentWidget().textCursor()
         text_cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.MoveAnchor)
         text_cursor.movePosition(QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.MoveAnchor, n=line_no - 1)
 
-        print("after redirect")
         self._menu_toolbar.push_position(self._root_path / relative_file_path, text_cursor.position())
 
     def _move_to_line(self, relative_file_path: Path, line_no: int):
@@ -106,7 +111,7 @@ class MainWindow(QMainWindow):
     def sizeHint(self):
         return QSize(1800, 1600)
 
-    def _get_disasm_folder(self):
+    def _get_disassembly_root(self):
         dis_asm_folder = QFileDialog.getExistingDirectory(self, "Select Disassembly Directory")
 
         dis_asm_root_path = Path(dis_asm_folder)
@@ -127,5 +132,8 @@ class MainWindow(QMainWindow):
 
         return super().mousePressEvent(event)
 
-    def close(self):
-        return super().close()
+    def closeEvent(self, event: QCloseEvent):
+        if not self._tab_widget.ask_to_quit_all_tabs_without_saving():
+            return event.ignore()
+
+        return super().closeEvent(event)
