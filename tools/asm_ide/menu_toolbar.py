@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QToolBar, QToolButton
 
 from foundry import icon
@@ -34,6 +34,24 @@ class MenuToolbar(QToolBar):
         self.save_all_files_action.setIcon(icon("save.svg"))
 
         self.update_save_status(False, False)
+        # Save Button End
+
+        self.addSeparator()
+
+        # Undo/Redo Buttons
+        self.undo_action = self.addAction("Undo")
+        self.undo_action.setIcon(icon("rotate-ccw.svg"))
+
+        self.redo_action = self.addAction("Redo")
+        self.redo_action.setIcon(icon("rotate-cw.svg"))
+
+        self.undo_action.setShortcut(Qt.Modifier.CTRL | Qt.Key.Key_Z)
+        self.redo_action.setShortcuts(
+            [Qt.Modifier.CTRL | Qt.Key.Key_Y, Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_Z]
+        )
+
+        self.update_undo_redo_buttons(False, False)
+        # Undo/Redo Buttons End
 
         self.addSeparator()
 
@@ -47,12 +65,17 @@ class MenuToolbar(QToolBar):
         self.go_forward_action.triggered.connect(self._go_forward)
 
         self._update_navigation_buttons()
+        # Navigation Buttons End
 
     def update_save_status(self, current_document_is_modified: bool, any_document_is_modified: bool):
         self.save_current_file_action.setEnabled(current_document_is_modified)
         self.save_all_files_action.setEnabled(any_document_is_modified)
 
         self._save_button.setEnabled(any_document_is_modified)
+
+    def update_undo_redo_buttons(self, undo_available: bool, redo_available: bool):
+        self.undo_action.setEnabled(undo_available)
+        self.redo_action.setEnabled(redo_available)
 
     def push_position(self, abs_path: Path, block_index: int):
         self._position_stack.push(abs_path, block_index)

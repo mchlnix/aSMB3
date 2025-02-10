@@ -59,6 +59,11 @@ class MainWindow(QMainWindow):
         toolbar.save_current_file_action.triggered.connect(self._tab_widget.save_current_file)
         toolbar.save_all_files_action.triggered.connect(self._tab_widget.save_all_files)
 
+        toolbar.undo_action.triggered.connect(self._tab_widget.on_undo)
+        toolbar.redo_action.triggered.connect(self._tab_widget.on_redo)
+
+        self._tab_widget.undo_redo_changed.connect(toolbar.update_undo_redo_buttons)
+
         toolbar.position_change_requested.connect(self._move_to_position)
 
         QShortcut(QKeySequence(Qt.Modifier.ALT | Qt.Key.Key_Right), self, toolbar.go_forward_action.trigger)
