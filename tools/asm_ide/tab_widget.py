@@ -168,7 +168,7 @@ class TabWidget(QTabWidget):
     def _close_tab(self, index: int):
         path_of_tab = self._path_to_tab[index]
 
-        if not self._ask_for_close_without_saving([str(path_of_tab)]):
+        if self.widget(index).text_document.isModified() and not self._ask_for_close_without_saving([str(path_of_tab)]):
             return
 
         self._path_to_tab.pop(index)

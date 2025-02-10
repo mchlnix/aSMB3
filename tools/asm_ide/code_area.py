@@ -33,6 +33,7 @@ _LINE_NO_COLOR = QColor.fromRgb(0x2C91AF)
 
 
 class LineNumberArea(QWidget):
+    MARGIN_LEFT = 10
     MARGIN_RIGHT = 10
 
     def __init__(self, editor: "CodeArea"):
@@ -49,6 +50,9 @@ class LineNumberArea(QWidget):
 
         self.editor.setViewportMargins(self.sizeHint().width(), 0, 0, 0)
 
+        # weird bug, when there are no tabs, you open one, the QPaintEvent rects don't grow with the widget. so force it
+        self.resize(self.sizeHint())
+
     @property
     def no_of_digits(self):
         line_count = self.editor.document().lineCount()
@@ -57,12 +61,13 @@ class LineNumberArea(QWidget):
         return digits_in_last_line_no
 
     def sizeHint(self):
-        return QSize(self._line_no_width + self.MARGIN_RIGHT, self.editor.maximumSize().height())
+        size = QSize(self.MARGIN_LEFT + self._line_no_width + self.MARGIN_RIGHT, self.editor.maximumSize().height())
+        return size
 
     def paintEvent(self, event: QPaintEvent):
         self.paint_area(event)
 
-    def paint_area(self, _):
+    def paint_area(self, event: QPaintEvent):
         painter = QPainter(self)
         painter.setFont(self.editor.document().defaultFont())
         painter.setPen(_LINE_NO_COLOR)
@@ -71,7 +76,7 @@ class LineNumberArea(QWidget):
         top = self.editor.blockBoundingGeometry(block).translated(self.editor.contentOffset()).top() + 1
         bottom = top + self.editor.blockBoundingRect(block).height()
 
-        rect = QRect(0, top, self._line_no_width, bottom)
+        rect = QRect(self.MARGIN_LEFT, top, self._line_no_width, bottom)
 
         while block.isValid() and block.isVisible():
             line_no_str = str(block.blockNumber() + 1)
@@ -83,7 +88,7 @@ class LineNumberArea(QWidget):
             block = block.next()
 
         painter.setPen(QColor(150, 150, 150))
-        painter.drawLine(QPoint(self.width() - 1, 0), QPoint(self.width() - 1, self.height()))
+        painter.drawLine(QPoint(self.sizeHint().width() - 1, 0), QPoint(self.sizeHint().width() - 1, self.height()))
 
         painter.end()
 
