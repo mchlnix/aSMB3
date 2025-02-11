@@ -253,3 +253,9 @@ class TabWidget(QTabWidget):
         )
 
         return ret_button == QMessageBox.StandardButton.Yes
+
+    def focus_search_bar(self):
+        if self.currentWidget() is None:
+            return
+
+        self.currentWidget().focus_search_bar()

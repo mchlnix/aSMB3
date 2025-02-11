@@ -30,7 +30,9 @@ class LineNumberArea(QWidget):
         self._line_no_width = font_metrics.horizontalAdvance(self.no_of_digits * "9")
         self._line_no_height = font_metrics.lineSpacing()
 
-        self.editor.setViewportMargins(self.sizeHint().width(), 0, 0, 0)
+        viewport_margins = self.editor.viewportMargins()
+        viewport_margins.setLeft(self.sizeHint().width())
+        self.editor.setViewportMargins(viewport_margins)
 
         # weird bug, when there are no tabs, you open one, the QPaintEvent rects don't grow with the widget. so force it
         self.resize(self.sizeHint())
