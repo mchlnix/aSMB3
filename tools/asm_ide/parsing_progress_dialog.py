@@ -15,7 +15,7 @@ class ParsingProgressDialog(QProgressDialog):
 
         self.named_value_finder = NamedValueFinder(root_path)
 
-        self.setRange(0, self.named_value_finder.prg_count)
+        self.setRange(0, self.named_value_finder.prg_count * 2)
 
         self.setWindowModality(Qt.ApplicationModal)
 

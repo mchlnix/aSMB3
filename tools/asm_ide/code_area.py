@@ -27,6 +27,8 @@ from tools.asm_ide.line_number_area import LineNumberArea
 from tools.asm_ide.named_value_finder import NamedValueFinder
 from tools.asm_ide.search_bar import SearchBar
 
+_MAX_TOOLTIP_RESULTS = 30
+
 
 class CodeArea(QPlainTextEdit):
     text_position_clicked = Signal(int)
@@ -178,6 +180,10 @@ class CodeArea(QPlainTextEdit):
         text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
         word = text_cursor.selectedText().strip()
 
+        if text_cursor.atBlockEnd():
+            # when past the end of the line, the cursor finds the last word and still generates a tooltip, don't
+            word = ""
+
         if word == self.last_word:
             return super().mouseMoveEvent(e)
 
@@ -218,7 +224,19 @@ class CodeArea(QPlainTextEdit):
             name, value, file, line_no = self._named_value_finder.labels[word]
             self.syntax_highlighter.label_under_cursor = word
 
-        tooltip.showText(e.globalPos(), f"{file}+{line_no}: {name} = {value}", self)
+        tooltip_text = f"{file}+{line_no}: {name} = {value}"
+
+        if self._named_value_finder.name_to_locations.get(name, False):
+            tooltip_text += "\n\nAlso found at:"
+
+            for index, (file_path, line_no) in enumerate(sorted(self._named_value_finder.name_to_locations[name]), 1):
+                tooltip_text += f"\n{file_path}+{line_no}"
+
+                if index == _MAX_TOOLTIP_RESULTS:
+                    tooltip_text += "\n  ..."
+                    break
+
+        tooltip.showText(e.globalPos(), tooltip_text, self)
 
         self.last_block = text_cursor.block()
         self.syntax_highlighter.rehighlightBlock(self.last_block)
