@@ -53,6 +53,9 @@ class SearchBar(QWidget):
         self.move(QPoint(x_position, y_position))
 
     def setFocus(self):
+        if self._editor.textCursor().hasSelection():
+            self._search_input.setText(self._editor.textCursor().selectedText())
+
         self._search_input.selectAll()
         self._search_input.setFocus()
 
