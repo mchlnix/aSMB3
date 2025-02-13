@@ -24,6 +24,7 @@ class SearchBar(QWidget):
         self._search_input.textChanged.connect(lambda _: self.text_changed.emit())
 
         self._highlight_all_checkbox = QCheckBox("Highlight All")
+        self._highlight_all_checkbox.setChecked(True)
         self._highlight_all_checkbox.stateChanged.connect(lambda _: self.settings_changed.emit())
 
         self.layout().addWidget(self._search_input)
