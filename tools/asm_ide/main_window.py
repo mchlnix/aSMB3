@@ -7,7 +7,6 @@ from PySide6.QtGui import (
     QMouseEvent,
     QShortcut,
     Qt,
-    QTextCursor,
 )
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
@@ -96,11 +95,9 @@ class MainWindow(QMainWindow):
     def follow_redirect(self, relative_file_path: Path, line_no: int):
         self._move_to_line(relative_file_path, line_no)
 
-        text_cursor = self._tab_widget.currentWidget().textCursor()
-        text_cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.MoveAnchor)
-        text_cursor.movePosition(QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.MoveAnchor, n=line_no - 1)
-
-        self._menu_toolbar.push_position(self._root_path / relative_file_path, text_cursor.position())
+        self._menu_toolbar.push_position(
+            self._root_path / relative_file_path, self._tab_widget.currentWidget().textCursor().position()
+        )
 
     def _move_to_line(self, relative_file_path: Path, line_no: int):
         self._tab_widget.open_or_switch_file(self._root_path / relative_file_path)
@@ -117,7 +114,7 @@ class MainWindow(QMainWindow):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():
             return False
 
-        # TODO: take out before stuff
+        # TODO: take out before shipping
         path = Path("/home/michael/Gits/smb3")
         # path = self._get_disassembly_root()
 
