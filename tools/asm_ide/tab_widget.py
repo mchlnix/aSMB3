@@ -112,6 +112,8 @@ class TabWidget(QTabWidget):
 
         current_code_area.setTextCursor(current_cursor)
 
+        self.currentWidget().centerCursor()
+
     def scroll_to_position(self, block_index: int):
         current_code_area: CodeArea = self.currentWidget()
         current_cursor = current_code_area.textCursor()
@@ -121,6 +123,8 @@ class TabWidget(QTabWidget):
         self.blockSignals(True)
         current_code_area.setTextCursor(current_cursor)
         self.blockSignals(False)
+
+        self.currentWidget().centerCursor()
 
     def _on_current_tab_changed(self):
         self._emit_undo_redo_state()

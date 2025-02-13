@@ -125,6 +125,8 @@ class CodeArea(QPlainTextEdit):
 
         self.setTextCursor(cursor_at_match)
 
+        self.centerCursor()
+
     def _update_extra_selections(self):
         selections = [self._get_current_line_highlight()]
         selections.extend(self._get_search_highlights())
