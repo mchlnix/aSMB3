@@ -102,13 +102,10 @@ class TabWidget(QTabWidget):
 
     def scroll_to_line(self, line_no: int):
         current_code_area: CodeArea = self.currentWidget()
-        total_lines = current_code_area.document().lineCount()
 
-        current_code_area.moveCursor(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.MoveAnchor)
         current_cursor = current_code_area.textCursor()
-        current_cursor.movePosition(
-            QTextCursor.MoveOperation.Up, QTextCursor.MoveMode.MoveAnchor, total_lines - line_no
-        )
+        current_cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.MoveAnchor)
+        current_cursor.movePosition(QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.MoveAnchor, line_no - 1)
 
         current_code_area.setTextCursor(current_cursor)
 
@@ -116,13 +113,11 @@ class TabWidget(QTabWidget):
 
     def scroll_to_position(self, block_index: int):
         current_code_area: CodeArea = self.currentWidget()
-        current_cursor = current_code_area.textCursor()
 
+        current_cursor = current_code_area.textCursor()
         current_cursor.setPosition(block_index, QTextCursor.MoveMode.MoveAnchor)
 
-        self.blockSignals(True)
         current_code_area.setTextCursor(current_cursor)
-        self.blockSignals(False)
 
         self.currentWidget().centerCursor()
 
