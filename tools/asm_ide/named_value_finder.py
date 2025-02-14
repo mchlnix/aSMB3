@@ -1,10 +1,17 @@
 from collections import defaultdict
+from enum import Enum
 from pathlib import Path
 from typing import NamedTuple
 
-from PySide6.QtCore import QObject, QRegularExpression, Signal
+from PySide6.QtCore import QObject, QRegularExpression, QRunnable, Signal
 
 from foundry.data_source import strip_comment
+
+
+class NamedValueType(Enum):
+    CONSTANT = 0
+    LABEL = 1
+    RAM_VAR = 2
 
 
 class NamedValue(NamedTuple):
@@ -12,6 +19,7 @@ class NamedValue(NamedTuple):
     value: str
     origin_file: Path
     origin_line_no: int
+    type: NamedValueType
 
 
 _CONST_REGEX = QRegularExpression("([A-Za-z][A-za-z0-9_]*)\s*\=\s*(\$[0-9A-F]+|\%[0-1]+|[0-9]+)")
@@ -32,9 +40,7 @@ class NamedValueFinder(QObject):
 
         self.root_path = root_path
 
-        self.constants: dict[str, NamedValue] = dict()
-        self.ram_variables: dict[str, NamedValue] = dict()
-        self.labels: dict[str, NamedValue] = dict()
+        self.values: dict[str, NamedValue] = {}
 
         self.location_to_names: dict[tuple[Path, int], set[str]] = defaultdict(set)
         """
@@ -64,9 +70,8 @@ class NamedValueFinder(QObject):
             self._parse_file_for_references(prg_file)
             progress += 1
 
-        self._cleanup_references()
-
         self.progress_made.emit(progress, "Cleaning up References")
+        self._cleanup_references()
 
     @property
     def prg_files(self):
@@ -85,8 +90,9 @@ class NamedValueFinder(QObject):
             for line_no, line in enumerate(f.readlines(), 1):
                 line = strip_comment(line)
 
-                for regex, bucket in zip(
-                    [_CONST_REGEX, _RAM_REGEX, _LABEL_REGEX], [self.constants, self.ram_variables, self.labels]
+                for regex, nv_type in zip(
+                    (_CONST_REGEX, _RAM_REGEX, _LABEL_REGEX),
+                    (NamedValueType.CONSTANT, NamedValueType.RAM_VAR, NamedValueType.LABEL),
                 ):
                     match_iterator = regex.globalMatch(line)
 
@@ -98,13 +104,10 @@ class NamedValueFinder(QObject):
                         matched_name = match.capturedView(1)
                         matched_value = match.capturedView(2)
 
+                        self.values[matched_name] = NamedValue(matched_name, matched_value, rel_path, line_no, nv_type)
+
                         self.location_to_names[(rel_path, line_no)].add(matched_name)
                         self.name_to_locations[matched_name].add((rel_path, line_no))
-
-                        bucket.__setitem__(
-                            matched_name,
-                            NamedValue(matched_name, matched_value, rel_path, line_no),
-                        )
 
                     if we_matched:
                         break
@@ -127,8 +130,8 @@ class NamedValueFinder(QObject):
                     self.name_to_locations[matched_name].add((rel_path, line_no))
 
     def _cleanup_references(self):
-        for bucket in (self.constants, self.ram_variables, self.labels):
-            for name, named_value in bucket.items():
-                _, _, file_path, line_no = named_value
+        for name, named_value in self.values.items():
+            _, _, file_path, line_no, _ = named_value
 
-                self.name_to_locations[name].remove((file_path, line_no))
+            self.name_to_locations[name].remove((file_path, line_no))
+

@@ -2,7 +2,7 @@ from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat
 
 from foundry.data_source.assembly_parser import _is_generic_directive, _is_instruction
-from tools.asm_ide.named_value_finder import NamedValueFinder
+from tools.asm_ide.named_value_finder import NamedValueFinder, NamedValueType
 
 _DEC_NUMBER_REGEX = QRegularExpression("([0-9]+)")
 _HEX_NUMBER_REGEX = QRegularExpression("(\$[A-Fa-f0-9]+)")
@@ -131,11 +131,16 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
 
                         const_ram_or_label = match.capturedView(captured_index).strip()
 
-                        if const_ram_or_label in self.named_value_finder.constants:
+                        if const_ram_or_label not in self.named_value_finder.values:
+                            continue
+
+                        *_, nv_type = self.named_value_finder.values[const_ram_or_label]
+
+                        if nv_type == NamedValueType.CONSTANT:
                             color = _CONST_COLOR
-                        elif const_ram_or_label in self.named_value_finder.ram_variables:
+                        elif nv_type == NamedValueType.RAM_VAR:
                             color = _RAM_VARIABLE_COLOR
-                        elif const_ram_or_label in self.named_value_finder.labels:
+                        elif nv_type == NamedValueType.LABEL:
                             color = _LABEL_COLOR
                         else:
                             continue
