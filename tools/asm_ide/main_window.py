@@ -129,8 +129,9 @@ class MainWindow(QMainWindow):
 
             local_copies[abs_path] = text
 
-        # todo: we only need to check the definitions of the current tab, not all prg files
-        self._thread_pool.start(self._named_value_finder.run_with_local_copies(local_copies))
+        currently_open_file_path = self._tab_widget.tab_index_to_path[self._tab_widget.currentIndex()]
+
+        self._thread_pool.start(self._named_value_finder.run_with_local_copies(local_copies, currently_open_file_path))
 
     def _on_open(self):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():

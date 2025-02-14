@@ -47,6 +47,7 @@ class NamedValueFinder(QRunnable):
         self.root_path = root_path
 
         self._local_copies: dict[Path, str] = {}
+        self._currently_open_file: Path = None
         """
         When documents are modified, but not saved yet, we have to use the local copies, instead of the files on disk.
         """
@@ -77,8 +78,9 @@ class NamedValueFinder(QRunnable):
     def prg_count(self):
         return len(self.prg_files)
 
-    def run_with_local_copies(self, local_copies: dict[Path, str]):
+    def run_with_local_copies(self, local_copies: dict[Path, str], open_file: Path = None):
         self._local_copies = local_copies
+        self._currently_open_file = open_file
 
         return self.run
 
@@ -88,21 +90,25 @@ class NamedValueFinder(QRunnable):
         self._location_to_names.clear()
         self._name_to_locations.clear()
 
-        smb3_path = self.root_path / "smb3.asm"
-
-        self._parse_file_for_definitions(smb3_path)
-        self._parse_file_for_references(smb3_path)
-
         self.signals.maximum_found.emit(self.prg_count * 2 + 1)
         progress = 0
 
         # Pass 1, get all the definitions
-        for prg_file in self.prg_files:
-            self.signals.progress_made.emit(progress, f"Parsing: {prg_file}")
-            self._parse_file_for_definitions(prg_file)
-            progress += 1
+        smb3_path = self.root_path / "smb3.asm"
+
+        if self._currently_open_file is None:
+            self._parse_file_for_definitions(smb3_path)
+
+            for prg_file in self.prg_files:
+                self.signals.progress_made.emit(progress, f"Parsing: {prg_file}")
+                self._parse_file_for_definitions(prg_file)
+                progress += 1
+        else:
+            self._parse_file_for_definitions(self._currently_open_file)
 
         # Pass 2, find all the references
+        self._parse_file_for_references(smb3_path)
+
         for prg_file in self.prg_files:
             self.signals.progress_made.emit(progress, f"Parsing: {prg_file}")
             self._parse_file_for_references(prg_file)
