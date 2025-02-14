@@ -255,7 +255,7 @@ class CodeArea(QPlainTextEdit):
         tooltip_text = f"{file}+{line_no}: {name} = {value}"
 
         if self._named_value_finder.name_to_locations.get(name, False):
-            tooltip_text += "\n\nAlso found at:"
+            tooltip_text += "\n\nReferenced at:"
 
             for index, (file_path, line_no) in enumerate(sorted(self._named_value_finder.name_to_locations[name]), 1):
                 tooltip_text += f"\n{file_path}+{line_no}"
