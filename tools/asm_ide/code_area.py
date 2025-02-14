@@ -84,9 +84,6 @@ class CodeArea(QPlainTextEdit):
 
         self._current_search_cursor: QTextCursor = QTextCursor()
 
-        self.text_document.contentsChange.connect(print)
-        self.text_document.blockCountChanged.connect(print)
-
     def focus_search_bar(self):
         self._search_bar.setFocus()
 

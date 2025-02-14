@@ -1,13 +1,15 @@
 from pathlib import Path
 from typing import Generator
 
-from PySide6.QtCore import Signal, SignalInstance
+from PySide6.QtCore import QTimer, Signal, SignalInstance
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QMessageBox, QTabWidget
 
 from tools.asm_ide.code_area import CodeArea
 from tools.asm_ide.named_value_finder import NamedValueFinder
 from tools.asm_ide.tab_bar import TabBar
+
+_TEXT_CHANGE_TRIGGER_DELAY = 1000  # milli seconds
 
 
 class TabWidget(QTabWidget):
@@ -31,6 +33,7 @@ class TabWidget(QTabWidget):
     :param bool True if the current document has something to undo.
     :param bool True if the current document has something to redo.
     """
+    contents_changed = Signal()
 
     tabCloseRequested: SignalInstance(int)
     currentChanged: SignalInstance(bool)
@@ -39,7 +42,7 @@ class TabWidget(QTabWidget):
         super(TabWidget, self).__init__(parent)
         self.setMouseTracking(True)
 
-        self._path_to_tab: list[Path] = []
+        self.tab_index_to_path: list[Path] = []
         self._named_value_finder = named_value_finder
 
         tab_bar = TabBar(self)
@@ -50,9 +53,20 @@ class TabWidget(QTabWidget):
         self.tabCloseRequested.connect(self._close_tab)
         self.currentChanged.connect(self._on_current_tab_changed)
 
+        self._text_change_delay_timer = QTimer(self)
+        """
+        A QTimer, that is connected to the different CodeArea objects. Whenever their text changes, this timer will be
+        started, or if already running, restarted.
+        This way, we will always wait 1 second from the last key stroke before triggering the contents_changed signal.
+        Otherwise this signal would be sent for every single keystroke.
+        """
+        self._text_change_delay_timer.setSingleShot(True)
+        self._text_change_delay_timer.setInterval(_TEXT_CHANGE_TRIGGER_DELAY)
+        self._text_change_delay_timer.timeout.connect(self.contents_changed.emit)
+
     def open_or_switch_file(self, abs_path: Path):
-        if abs_path in self._path_to_tab:
-            tab_index = self._path_to_tab.index(abs_path)
+        if abs_path in self.tab_index_to_path:
+            tab_index = self.tab_index_to_path.index(abs_path)
 
             self.setCurrentIndex(tab_index)
 
@@ -62,11 +76,12 @@ class TabWidget(QTabWidget):
     def _load_asm_file(self, path: Path) -> None:
         code_area = CodeArea(self, self._named_value_finder)
         code_area.redirect_clicked.connect(self.redirect_clicked.emit)
+        code_area.document().contentsChange.connect(self._maybe_trigger_timer)
 
-        self._path_to_tab.append(path)
+        self.tab_index_to_path.append(path)
 
         tab_index = self.addTab(code_area, "")
-        assert tab_index == len(self._path_to_tab) - 1
+        assert tab_index == len(self.tab_index_to_path) - 1
 
         code_area.text_document.setPlainText(path.read_text())
         code_area.text_document.setModified(False)
@@ -81,6 +96,18 @@ class TabWidget(QTabWidget):
         self.setCurrentIndex(tab_index)
         self._update_title_of_tab_at_index(self.currentIndex())
 
+    def _maybe_trigger_timer(self, _: int, chars_added: int, chars_removed: int) -> None:
+        """
+        The contentsChange signal of the QTextDocument is supposed to fire on text changes and format changes.
+        It doesn't seem to do that last bit, but to make sure, only trigger the text change delay timer, when characters
+        have been added or removed.
+        Changing one a character place will still show up as one added and one removed.
+        """
+        if chars_added == chars_removed == 0:
+            return
+
+        self._text_change_delay_timer.start()
+
     def save_current_file(self):
         self._save_file_at_index(self.currentIndex())
 
@@ -91,7 +118,7 @@ class TabWidget(QTabWidget):
     def _save_file_at_index(self, index: int):
         code_area: CodeArea = self.widget(index)
 
-        path = self._path_to_tab[index]
+        path = self.tab_index_to_path[index]
         data = code_area.text_document.toPlainText()
 
         with path.open("w") as file:
@@ -143,7 +170,7 @@ class TabWidget(QTabWidget):
             self.document_modified.emit(current_document_is_modified, current_document_is_modified)
             return
 
-        any_document_is_modified = any(code_area.document().isModified() for code_area in self._iter_widgets())
+        any_document_is_modified = any(code_area.document().isModified() for code_area in self.widgets())
 
         self.document_modified.emit(False, any_document_is_modified)
 
@@ -151,7 +178,7 @@ class TabWidget(QTabWidget):
         if index == -1:
             return
 
-        current_path = self._path_to_tab[index]
+        current_path = self.tab_index_to_path[index]
 
         tab_title = current_path.name
 
@@ -160,17 +187,17 @@ class TabWidget(QTabWidget):
 
         self.setTabText(index, tab_title)
 
-    def _iter_widgets(self) -> Generator[CodeArea, None, None]:
+    def widgets(self) -> Generator[CodeArea, None, None]:
         for tab_index in range(self.count()):
             yield self.widget(tab_index)
 
     def _close_tab(self, index: int):
-        path_of_tab = self._path_to_tab[index]
+        path_of_tab = self.tab_index_to_path[index]
 
         if self.widget(index).text_document.isModified() and not self._ask_for_close_without_saving([str(path_of_tab)]):
             return
 
-        self._path_to_tab.pop(index)
+        self.tab_index_to_path.pop(index)
         self.removeTab(index)
 
     def to_next_tab(self):
@@ -226,14 +253,14 @@ class TabWidget(QTabWidget):
     def ask_to_quit_all_tabs_without_saving(self):
         modified_file_names: list[str] = [
             self.tabText(tab_index).removesuffix(" *")
-            for tab_index, code_area in enumerate(self._iter_widgets())
+            for tab_index, code_area in enumerate(self.widgets())
             if code_area.document().isModified()
         ]
 
         return self._ask_for_close_without_saving(modified_file_names)
 
     def clear(self):
-        self._path_to_tab.clear()
+        self.tab_index_to_path.clear()
 
         return super().clear()
 
