@@ -1,11 +1,11 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
-from tools.asm_ide.named_value_finder import NamedValueFinder
+from tools.asm_ide.reference_finder import ReferenceFinder
 
 
 class ParsingProgressDialog(QProgressDialog):
-    def __init__(self, named_value_finder: NamedValueFinder):
+    def __init__(self, named_value_finder: ReferenceFinder):
         super(ParsingProgressDialog, self).__init__(None)
 
         self.named_value_finder = named_value_finder

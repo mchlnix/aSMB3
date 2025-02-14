@@ -10,18 +10,18 @@ from PySide6.QtCore import QObject, QRegularExpression, QRunnable, Signal
 from foundry.data_source import strip_comment
 
 
-class NamedValueType(Enum):
+class ReferenceType(Enum):
     CONSTANT = 0
     LABEL = 1
     RAM_VAR = 2
 
 
-class NamedValue(NamedTuple):
+class ReferenceDefinitions(NamedTuple):
     name: str
     value: str
     origin_file: Path
     origin_line_no: int
-    type: NamedValueType
+    type: ReferenceType
 
 
 _CONST_REGEX = QRegularExpression("([A-Za-z][A-za-z0-9_]*)\s*\=\s*(\$[0-9A-F]+|\%[0-1]+|[0-9]+)")
@@ -40,7 +40,7 @@ class ParserSignals(QObject):
     progress_made = Signal(int, str)
 
 
-class NamedValueFinder(QRunnable):
+class ReferenceFinder(QRunnable):
     def __init__(self, root_path: Path):
         super().__init__()
 
@@ -52,9 +52,8 @@ class NamedValueFinder(QRunnable):
         When documents are modified, but not saved yet, we have to use the local copies, instead of the files on disk.
         """
 
-        # todo: rename to definitions?
-        self.values: dict[str, NamedValue] = {}
-        self._values: dict[str, NamedValue] = {}
+        self.definitions: dict[str, ReferenceDefinitions] = {}
+        self._definitions: dict[str, ReferenceDefinitions] = {}
 
         self.name_to_locations: dict[str, set[tuple[Path, int]]] = defaultdict(set)
         self._name_to_locations: dict[str, set[tuple[Path, int]]] = defaultdict(set)
@@ -93,7 +92,7 @@ class NamedValueFinder(QRunnable):
         smb3_path = self.root_path / "smb3.asm"
 
         if do_a_complete_parse:
-            self._values.clear()
+            self._definitions.clear()
             self._name_to_locations.clear()
 
             for asm_file in [smb3_path] + self.prg_files:
@@ -103,17 +102,17 @@ class NamedValueFinder(QRunnable):
 
             added_definitions = []
         else:
-            self._values = self.values.copy()
+            self._definitions = self.definitions.copy()
             self._name_to_locations = self.name_to_locations.copy()
 
-            self._remove_all_values_from_file(self._currently_open_file)
+            self._remove_all_definitions_of_file(self._currently_open_file)
             self._parse_file_for_definitions(self._currently_open_file)
 
-            old_value_set = set(self.values.keys())
-            new_value_set = set(self._values.keys())
+            old_definitions = set(self.definitions.keys())
+            new_definitions = set(self._definitions.keys())
 
-            removed_definitions = list(old_value_set.difference(new_value_set))
-            added_definitions = list(new_value_set.difference(old_value_set))
+            removed_definitions = list(old_definitions.difference(new_definitions))
+            added_definitions = list(new_definitions.difference(old_definitions))
 
             for definition in removed_definitions:
                 print(f"Popping References for removed {definition}: {self.name_to_locations.pop(definition, None)}")
@@ -128,19 +127,19 @@ class NamedValueFinder(QRunnable):
         self.signals.progress_made.emit(progress, "Cleaning up References")
         self._cleanup_references()
 
-        self.values = self._values.copy()
+        self.definitions = self._definitions.copy()
         self.name_to_locations = self._name_to_locations.copy()
 
         self._local_copies.clear()
 
         print(f"Parsing took {round(time.time() - start_time, 2)} seconds")
 
-    def _remove_all_values_from_file(self, abs_file_path: Path):
+    def _remove_all_definitions_of_file(self, abs_file_path: Path):
         rel_path = abs_file_path.relative_to(self.root_path)
 
-        for name, value in list(self._values.items()):
+        for name, value in list(self._definitions.items()):
             if value.origin_file == rel_path:
-                self._values.pop(name)
+                self._definitions.pop(name)
 
     def _parse_file_for_definitions(self, file_path: Path):
         if file_path not in self._local_copies:
@@ -156,7 +155,7 @@ class NamedValueFinder(QRunnable):
 
             for regex, nv_type in zip(
                 (_CONST_REGEX, _RAM_REGEX, _LABEL_REGEX),
-                (NamedValueType.CONSTANT, NamedValueType.RAM_VAR, NamedValueType.LABEL),
+                (ReferenceType.CONSTANT, ReferenceType.RAM_VAR, ReferenceType.LABEL),
             ):
                 match_iterator = regex.globalMatch(line)
 
@@ -168,7 +167,9 @@ class NamedValueFinder(QRunnable):
                     matched_name = match.capturedView(1)
                     matched_value = match.capturedView(2)
 
-                    self._values[matched_name] = NamedValue(matched_name, matched_value, rel_path, line_no, nv_type)
+                    self._definitions[matched_name] = ReferenceDefinitions(
+                        matched_name, matched_value, rel_path, line_no, nv_type
+                    )
 
                     self._name_to_locations[matched_name].add((rel_path, line_no))
 
@@ -211,7 +212,7 @@ class NamedValueFinder(QRunnable):
 
     def _cleanup_references(self):
         """Remove the location of the name definition from the list of references."""
-        for name, named_value in self.values.items():
+        for name, named_value in self.definitions.items():
             _, _, file_path, line_no, _ = named_value
 
             with suppress(KeyError):
