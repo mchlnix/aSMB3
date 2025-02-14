@@ -6,7 +6,7 @@ from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QMessageBox, QTabWidget
 
 from tools.asm_ide.code_area import CodeArea
-from tools.asm_ide.named_value_finder import NamedValueFinder
+from tools.asm_ide.reference_finder import ReferenceFinder
 from tools.asm_ide.tab_bar import TabBar
 
 
@@ -36,7 +36,7 @@ class TabWidget(QTabWidget):
     tabCloseRequested: SignalInstance(int)
     currentChanged: SignalInstance(bool)
 
-    def __init__(self, parent, named_value_finder: NamedValueFinder):
+    def __init__(self, parent, named_value_finder: ReferenceFinder):
         super(TabWidget, self).__init__(parent)
         self.setMouseTracking(True)
 

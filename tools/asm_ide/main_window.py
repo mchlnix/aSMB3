@@ -12,8 +12,8 @@ from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
 from tools.asm_ide.menu_toolbar import MenuToolbar
-from tools.asm_ide.named_value_finder import NamedValueFinder
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
+from tools.asm_ide.reference_finder import ReferenceFinder
 from tools.asm_ide.tab_widget import TabWidget
 
 
@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
-        self._named_value_finder = NamedValueFinder(self._root_path)
+        self._named_value_finder = ReferenceFinder(self._root_path)
 
         ParsingProgressDialog(self._named_value_finder)
 
