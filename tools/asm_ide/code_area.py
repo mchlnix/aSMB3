@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal, SignalInstance
+from PySide6.QtCore import Qt, QTimer, Signal, SignalInstance
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -29,6 +29,8 @@ from tools.asm_ide.search_bar import SearchBar
 
 _MAX_TOOLTIP_RESULTS = 30
 
+_TEXT_CHANGE_TRIGGER_DELAY = 1000  # milli seconds
+
 
 class CodeArea(QPlainTextEdit):
     text_position_clicked = Signal(int)
@@ -40,6 +42,8 @@ class CodeArea(QPlainTextEdit):
     :param Path The relative file path to go to.
     :param int The line number to go to.
     """
+    contents_changed = Signal()
+
     blockCountChanged: SignalInstance(int)
     cursorPositionChanged: SignalInstance()
 
@@ -83,6 +87,31 @@ class CodeArea(QPlainTextEdit):
         self._search_bar.show()
 
         self._current_search_cursor: QTextCursor = QTextCursor()
+
+        self._text_change_delay_timer = QTimer(self)
+        """
+        A QTimer, that is connected to the different CodeArea objects. Whenever their text changes, this timer will be
+        started, or if already running, restarted.
+        This way, we will always wait 1 second from the last key stroke before triggering the contents_changed signal.
+        Otherwise this signal would be sent for every single keystroke.
+        """
+        self._text_change_delay_timer.setSingleShot(True)
+        self._text_change_delay_timer.setInterval(_TEXT_CHANGE_TRIGGER_DELAY)
+        self._text_change_delay_timer.timeout.connect(self.contents_changed.emit)
+
+        self.document().contentsChange.connect(self._maybe_trigger_timer)
+
+    def _maybe_trigger_timer(self, _: int, chars_added: int, chars_removed: int) -> None:
+        """
+        The contentsChange signal of the QTextDocument is supposed to fire on text changes and format changes.
+        It doesn't seem to do that last bit, but to make sure, only trigger the text change delay timer, when characters
+        have been added or removed.
+        Changing one a character place will still show up as one added and one removed.
+        """
+        if chars_added == chars_removed == 0:
+            return
+
+        self._text_change_delay_timer.start()
 
     def focus_search_bar(self):
         self._search_bar.setFocus()
