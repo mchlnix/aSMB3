@@ -154,6 +154,7 @@ class CodeArea(QPlainTextEdit):
             return
 
         self.setTextCursor(cursor_at_match)
+        self.text_position_clicked.emit(cursor_at_match.position())
 
         self.centerCursor()
 
