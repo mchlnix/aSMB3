@@ -79,6 +79,7 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
 
         self.named_value_finder = named_value_finder
 
+        # todo: with ReferenceType, this should be reducible to one member
         self.const_under_cursor = ""
         self.ram_variable_under_cursor = ""
         self.label_under_cursor = ""
