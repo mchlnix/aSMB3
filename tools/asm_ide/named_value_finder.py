@@ -52,15 +52,10 @@ class NamedValueFinder(QRunnable):
         When documents are modified, but not saved yet, we have to use the local copies, instead of the files on disk.
         """
 
+        # todo: rename to definitions?
         self.values: dict[str, NamedValue] = {}
         self._values: dict[str, NamedValue] = {}
 
-        self.location_to_names: dict[tuple[Path, int], set[str]] = defaultdict(set)
-        self._location_to_names: dict[tuple[Path, int], set[str]] = defaultdict(set)
-        """
-        The key is a tuple of file path and line number, the value is a list of all names we found there.
-        These need to be updated when a line changes and when the number of lines changes.
-        """
         self.name_to_locations: dict[str, set[tuple[Path, int]]] = defaultdict(set)
         self._name_to_locations: dict[str, set[tuple[Path, int]]] = defaultdict(set)
 
@@ -86,44 +81,66 @@ class NamedValueFinder(QRunnable):
 
     def run(self):
         start_time = time.time()
-        self._values.clear()
-        self._location_to_names.clear()
-        self._name_to_locations.clear()
 
-        self.signals.maximum_found.emit(self.prg_count * 2 + 1)
+        do_a_complete_parse = self._currently_open_file is None
+
+        # smb3.asm twice, all the prg files twice and then cleaning up the references once
+        # this is only for a progress dialog, where we always do a complete parse
+        self.signals.maximum_found.emit(2 + self.prg_count * 2 + 1)
         progress = 0
 
         # Pass 1, get all the definitions
         smb3_path = self.root_path / "smb3.asm"
 
-        if self._currently_open_file is None:
-            self._parse_file_for_definitions(smb3_path)
+        if do_a_complete_parse:
+            self._values.clear()
+            self._name_to_locations.clear()
 
-            for prg_file in self.prg_files:
-                self.signals.progress_made.emit(progress, f"Parsing: {prg_file}")
-                self._parse_file_for_definitions(prg_file)
+            for asm_file in [smb3_path] + self.prg_files:
+                self.signals.progress_made.emit(progress, f"Parsing: {asm_file}")
+                self._parse_file_for_definitions(asm_file)
                 progress += 1
+
+            added_definitions = []
         else:
+            self._values = self.values.copy()
+            self._name_to_locations = self.name_to_locations.copy()
+
+            self._remove_all_values_from_file(self._currently_open_file)
             self._parse_file_for_definitions(self._currently_open_file)
 
-        # Pass 2, find all the references
-        self._parse_file_for_references(smb3_path)
+            old_value_set = set(self.values.keys())
+            new_value_set = set(self._values.keys())
 
-        for prg_file in self.prg_files:
-            self.signals.progress_made.emit(progress, f"Parsing: {prg_file}")
-            self._parse_file_for_references(prg_file)
+            removed_definitions = list(old_value_set.difference(new_value_set))
+            added_definitions = list(new_value_set.difference(old_value_set))
+
+            for definition in removed_definitions:
+                print(f"Popping References for removed {definition}: {self.name_to_locations.pop(definition, None)}")
+
+        # Pass 2, find all the references
+        for asm_file in [smb3_path] + self.prg_files:
+            self.signals.progress_made.emit(progress, f"Parsing: {asm_file}")
+
+            self._parse_file_for_references(asm_file, added_definitions, do_a_complete_parse)
             progress += 1
 
         self.signals.progress_made.emit(progress, "Cleaning up References")
         self._cleanup_references()
 
         self.values = self._values.copy()
-        self.location_to_names = self._location_to_names.copy()
         self.name_to_locations = self._name_to_locations.copy()
 
         self._local_copies.clear()
 
         print(f"Parsing took {round(time.time() - start_time, 2)} seconds")
+
+    def _remove_all_values_from_file(self, abs_file_path: Path):
+        rel_path = abs_file_path.relative_to(self.root_path)
+
+        for name, value in list(self._values.items()):
+            if value.origin_file == rel_path:
+                self._values.pop(name)
 
     def _parse_file_for_definitions(self, file_path: Path):
         if file_path not in self._local_copies:
@@ -153,20 +170,32 @@ class NamedValueFinder(QRunnable):
 
                     self._values[matched_name] = NamedValue(matched_name, matched_value, rel_path, line_no, nv_type)
 
-                    self._location_to_names[(rel_path, line_no)].add(matched_name)
                     self._name_to_locations[matched_name].add((rel_path, line_no))
 
                 if we_matched:
                     break
 
-    def _parse_file_for_references(self, file_path: Path):
-        if file_path not in self._local_copies:
-            with file_path.open("r") as f:
-                lines = f.readlines()
+    def _parse_file_for_references(self, file_to_parse: Path, added_definitions: list[str], force_parse):
+        if file_to_parse not in self._local_copies:
+            data = file_to_parse.read_text()
         else:
-            lines = self._local_copies[file_path].splitlines(True)
+            data = self._local_copies[file_to_parse]
 
-        rel_path = file_path.relative_to(self.root_path)
+        is_open_file = file_to_parse == self._currently_open_file
+
+        if not (force_parse or is_open_file) and not any(value in data for value in added_definitions):
+            return
+
+        lines = data.splitlines(True)
+
+        rel_path = file_to_parse.relative_to(self.root_path)
+
+        print(f"Parsing {rel_path}")
+        if not force_parse and is_open_file:
+            for name, positions in self._name_to_locations.items():
+                for file_path, line_no in list(positions):
+                    if file_path == rel_path:
+                        self._name_to_locations[name].remove((rel_path, line_no))
 
         for line_no, line in enumerate(lines, 1):
             line = strip_comment(line)
@@ -178,7 +207,6 @@ class NamedValueFinder(QRunnable):
 
                 matched_name = match.capturedView(1)
 
-                self._location_to_names[(rel_path, line_no)].add(matched_name)
                 self._name_to_locations[matched_name].add((rel_path, line_no))
 
     def _cleanup_references(self):

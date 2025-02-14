@@ -1,15 +1,13 @@
 from pathlib import Path
 from typing import Generator
 
-from PySide6.QtCore import QTimer, Signal, SignalInstance
+from PySide6.QtCore import Signal, SignalInstance
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QMessageBox, QTabWidget
 
 from tools.asm_ide.code_area import CodeArea
 from tools.asm_ide.named_value_finder import NamedValueFinder
 from tools.asm_ide.tab_bar import TabBar
-
-_TEXT_CHANGE_TRIGGER_DELAY = 1000  # milli seconds
 
 
 class TabWidget(QTabWidget):
@@ -33,7 +31,7 @@ class TabWidget(QTabWidget):
     :param bool True if the current document has something to undo.
     :param bool True if the current document has something to redo.
     """
-    contents_changed = Signal()
+    contents_changed = Signal(Path)
 
     tabCloseRequested: SignalInstance(int)
     currentChanged: SignalInstance(bool)
@@ -53,17 +51,6 @@ class TabWidget(QTabWidget):
         self.tabCloseRequested.connect(self._close_tab)
         self.currentChanged.connect(self._on_current_tab_changed)
 
-        self._text_change_delay_timer = QTimer(self)
-        """
-        A QTimer, that is connected to the different CodeArea objects. Whenever their text changes, this timer will be
-        started, or if already running, restarted.
-        This way, we will always wait 1 second from the last key stroke before triggering the contents_changed signal.
-        Otherwise this signal would be sent for every single keystroke.
-        """
-        self._text_change_delay_timer.setSingleShot(True)
-        self._text_change_delay_timer.setInterval(_TEXT_CHANGE_TRIGGER_DELAY)
-        self._text_change_delay_timer.timeout.connect(self.contents_changed.emit)
-
     def open_or_switch_file(self, abs_path: Path):
         if abs_path in self.tab_index_to_path:
             tab_index = self.tab_index_to_path.index(abs_path)
@@ -73,40 +60,28 @@ class TabWidget(QTabWidget):
         else:
             self._load_asm_file(abs_path)
 
-    def _load_asm_file(self, path: Path) -> None:
+    def _load_asm_file(self, abs_path: Path) -> None:
         code_area = CodeArea(self, self._named_value_finder)
         code_area.redirect_clicked.connect(self.redirect_clicked.emit)
-        code_area.document().contentsChange.connect(self._maybe_trigger_timer)
+        code_area.contents_changed.connect(lambda: self.contents_changed.emit(abs_path))
 
-        self.tab_index_to_path.append(path)
+        self.tab_index_to_path.append(abs_path)
 
         tab_index = self.addTab(code_area, "")
         assert tab_index == len(self.tab_index_to_path) - 1
 
-        code_area.text_document.setPlainText(path.read_text())
+        code_area.text_document.setPlainText(abs_path.read_text())
         code_area.text_document.setModified(False)
 
         code_area.text_document.modificationChanged.connect(self._react_to_modification)
         code_area.text_document.contentsChanged.connect(self._emit_undo_redo_state)
 
-        code_area.text_position_clicked.connect(lambda index: self.text_position_clicked.emit(path, index))
+        code_area.text_position_clicked.connect(lambda index: self.text_position_clicked.emit(abs_path, index))
 
         code_area.moveCursor(QTextCursor.Start)
 
         self.setCurrentIndex(tab_index)
         self._update_title_of_tab_at_index(self.currentIndex())
-
-    def _maybe_trigger_timer(self, _: int, chars_added: int, chars_removed: int) -> None:
-        """
-        The contentsChange signal of the QTextDocument is supposed to fire on text changes and format changes.
-        It doesn't seem to do that last bit, but to make sure, only trigger the text change delay timer, when characters
-        have been added or removed.
-        Changing one a character place will still show up as one added and one removed.
-        """
-        if chars_added == chars_removed == 0:
-            return
-
-        self._text_change_delay_timer.start()
 
     def save_current_file(self):
         self._save_file_at_index(self.currentIndex())

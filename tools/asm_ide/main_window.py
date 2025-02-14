@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
     def sizeHint(self):
         return QSize(1800, 1600)
 
-    def _update_search_index(self):
+    def _update_search_index(self, abs_path: Path):
         local_copies: dict[Path, str] = dict()
 
         for tab_index, code_area in enumerate(self._tab_widget.widgets()):
@@ -129,9 +129,7 @@ class MainWindow(QMainWindow):
 
             local_copies[abs_path] = text
 
-        currently_open_file_path = self._tab_widget.tab_index_to_path[self._tab_widget.currentIndex()]
-
-        self._thread_pool.start(self._named_value_finder.run_with_local_copies(local_copies, currently_open_file_path))
+        self._thread_pool.start(self._named_value_finder.run_with_local_copies(local_copies, abs_path))
 
     def _on_open(self):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():
