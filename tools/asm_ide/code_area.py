@@ -60,10 +60,11 @@ class CodeArea(QPlainTextEdit):
         self.text_document.setDefaultFont(self._font)
 
         # syntax highlighter
-        self.syntax_highlighter = AsmSyntaxHighlighter(self, named_value_finder)
+        self.syntax_highlighter = AsmSyntaxHighlighter(self, self._named_value_finder)
         self.syntax_highlighter.setDocument(self.text_document)
 
         # line number area
+        # todo: maybe use updateRequest signal to update line_number_area, when text box needs change
         self._line_number_area = LineNumberArea(self)
         self.blockCountChanged.connect(self._line_number_area.update_text_measurements)
 
@@ -82,6 +83,9 @@ class CodeArea(QPlainTextEdit):
         self._search_bar.show()
 
         self._current_search_cursor: QTextCursor = QTextCursor()
+
+        self.text_document.contentsChange.connect(print)
+        self.text_document.blockCountChanged.connect(print)
 
     def focus_search_bar(self):
         self._search_bar.setFocus()

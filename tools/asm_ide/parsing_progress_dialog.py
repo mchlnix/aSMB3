@@ -14,19 +14,19 @@ class ParsingProgressDialog(QProgressDialog):
         self.setLabelText(f"Preparing to parse '{root_path}'")
 
         self.named_value_finder = NamedValueFinder(root_path)
-
-        self.setRange(0, self.named_value_finder.prg_count * 2)
+        self.named_value_finder.maximum_found.connect(self.setMaximum)
+        self.named_value_finder.progress_made.connect(self._update_text)
 
         self.setWindowModality(Qt.ApplicationModal)
 
         self.show()
 
-        # need (at least) two calls to have the dialog show up correctly on fast PCs
-        QApplication.processEvents()
-        QApplication.processEvents()
-
-        for index, file_being_parsed in enumerate(self.named_value_finder.parse_files(), 1):
-            self.setValue(index)
-            self.setLabelText(f"Parsing {file_being_parsed}")
+        self.named_value_finder.parse_files()
 
         self.close()
+
+    def _update_text(self, progress: int, text: str):
+        self.setValue(progress)
+        self.setLabelText(text)
+
+        QApplication.processEvents()
