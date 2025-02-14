@@ -2,7 +2,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
-from PySide6.QtCore import QRegularExpression
+from PySide6.QtCore import QObject, QRegularExpression, Signal
 
 from foundry.data_source import strip_comment
 
@@ -23,8 +23,13 @@ _CONST_LABEL_CALL_RAM_VAR_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)")
 # todo keep track of macros
 
 
-class NamedValueFinder:
+class NamedValueFinder(QObject):
+    maximum_found = Signal(int)
+    progress_made = Signal(int, str)
+
     def __init__(self, root_path: Path):
+        super().__init__()
+
         self.root_path = root_path
 
         self.constants: dict[str, NamedValue] = dict()
@@ -44,17 +49,24 @@ class NamedValueFinder:
         self._parse_file_for_definitions(smb3_path)
         self._parse_file_for_references(smb3_path)
 
+        self.maximum_found.emit(self.prg_count * 2 + 1)
+        progress = 0
+
         # Pass 1, get all the definitions
         for prg_file in self.prg_files:
-            yield prg_file
+            self.progress_made.emit(progress, f"Parsing: {prg_file}")
             self._parse_file_for_definitions(prg_file)
+            progress += 1
 
         # Pass 2, find all the references
         for prg_file in self.prg_files:
-            yield prg_file
+            self.progress_made.emit(progress, f"Parsing: {prg_file}")
             self._parse_file_for_references(prg_file)
+            progress += 1
 
         self._cleanup_references()
+
+        self.progress_made.emit(progress, "Cleaning up References")
 
     @property
     def prg_files(self):
