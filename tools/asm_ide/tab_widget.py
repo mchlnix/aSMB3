@@ -77,6 +77,8 @@ class TabWidget(QTabWidget):
         code_area.text_document.contentsChanged.connect(self._emit_undo_redo_state)
 
         code_area.text_position_clicked.connect(lambda index: self.text_position_clicked.emit(abs_path, index))
+        # set the first navigation point of an opened file to the top
+        code_area.text_position_clicked.emit(0)
 
         code_area.moveCursor(QTextCursor.Start)
 
