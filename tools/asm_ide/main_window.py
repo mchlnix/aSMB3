@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, QThreadPool
 from PySide6.QtGui import (
     QCloseEvent,
     QKeySequence,
@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
 from tools.asm_ide.menu_toolbar import MenuToolbar
+from tools.asm_ide.named_value_finder import NamedValueFinder
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.tab_widget import TabWidget
 
@@ -23,15 +24,21 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("ASMB3 IDE")
         self.setMouseTracking(True)
 
+        self._thread_pool = QThreadPool()
+        self._thread_pool.setMaxThreadCount(1)
+
         self._tab_widget = None
 
         self._on_open()
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
-        progress_dialog = ParsingProgressDialog(self._root_path)
+        self._named_value_finder = NamedValueFinder(self._root_path)
 
-        self._tab_widget = TabWidget(self, progress_dialog.named_value_finder)
+        ParsingProgressDialog(self._named_value_finder)
+
+        self._tab_widget = TabWidget(self, self._named_value_finder)
+        self._tab_widget.contents_changed.connect(self._update_search_index)
         self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp), self, self._tab_widget.to_previous_tab)
@@ -109,6 +116,21 @@ class MainWindow(QMainWindow):
 
     def sizeHint(self):
         return QSize(1800, 1600)
+
+    def _update_search_index(self):
+        local_copies: dict[Path, str] = dict()
+
+        for tab_index, code_area in enumerate(self._tab_widget.widgets()):
+            if not code_area.document().isModified():
+                continue
+
+            abs_path = self._tab_widget.tab_index_to_path[tab_index]
+            text = code_area.document().toPlainText()
+
+            local_copies[abs_path] = text
+
+        # todo: we only need to check the definitions of the current tab, not all prg files
+        self._thread_pool.start(self._named_value_finder.run_with_local_copies(local_copies))
 
     def _on_open(self):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():
