@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from foundry import ctrl_is_pressed
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
-from tools.asm_ide.named_value_finder import NamedValueFinder
+from tools.asm_ide.named_value_finder import NamedValueFinder, NamedValueType
 from tools.asm_ide.search_bar import SearchBar
 
 _MAX_TOOLTIP_RESULTS = 30
@@ -208,11 +208,7 @@ class CodeArea(QPlainTextEdit):
         return super().mouseMoveEvent(e)
 
     def _update_tooltip(self, e, text_cursor, word):
-        word_is_a_constant = word in self._named_value_finder.constants
-        word_is_a_ram_variable = word in self._named_value_finder.ram_variables
-        word_is_a_label = word in self._named_value_finder.labels
-
-        if not (word_is_a_constant or word_is_a_ram_variable or word_is_a_label):
+        if word not in self._named_value_finder.values:
             self.setToolTip(None)
             return
 
@@ -220,14 +216,13 @@ class CodeArea(QPlainTextEdit):
         tooltip = QToolTip()
         tooltip.setFont(QFont("Monospace", 14))
 
-        if word_is_a_constant:
-            name, value, file, line_no = self._named_value_finder.constants[word]
+        name, value, file, line_no, nv_type = self._named_value_finder.values[word]
+
+        if nv_type == NamedValueType.CONSTANT:
             self.syntax_highlighter.const_under_cursor = word
-        elif word_is_a_ram_variable:
-            name, value, file, line_no = self._named_value_finder.ram_variables[word]
+        elif nv_type == NamedValueType.RAM_VAR:
             self.syntax_highlighter.ram_variable_under_cursor = word
         else:
-            name, value, file, line_no = self._named_value_finder.labels[word]
             self.syntax_highlighter.label_under_cursor = word
 
         tooltip_text = f"{file}+{line_no}: {name} = {value}"
@@ -264,19 +259,15 @@ class CodeArea(QPlainTextEdit):
         text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
         word = text_cursor.selectedText().strip()
 
-        if word in self._named_value_finder.constants:
-            info = self._named_value_finder.constants[word]
-        elif word in self._named_value_finder.labels:
-            info = self._named_value_finder.labels[word]
-        else:
+        info = self._named_value_finder.values.get(word, None)
+
+        if info is None:
             return super().mouseReleaseEvent(e)
 
         if not ctrl_is_pressed():
             return super().mouseReleaseEvent(e)
 
-        _, _, relative_file_path, line_no = info
-
-        self.redirect_clicked.emit(relative_file_path, line_no)
+        self.redirect_clicked.emit(info.origin_file, info.origin_line_no)
 
         return super().mouseReleaseEvent(e)
 
