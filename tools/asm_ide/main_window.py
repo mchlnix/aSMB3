@@ -33,11 +33,11 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
-        self._named_value_finder = ReferenceFinder(self._root_path)
+        self._reference_finder = ReferenceFinder(self._root_path)
 
-        ParsingProgressDialog(self._named_value_finder)
+        ParsingProgressDialog(self._reference_finder)
 
-        self._tab_widget = TabWidget(self, self._named_value_finder)
+        self._tab_widget = TabWidget(self, self._reference_finder)
         self._tab_widget.contents_changed.connect(self._update_search_index)
         self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
@@ -129,7 +129,7 @@ class MainWindow(QMainWindow):
 
             local_copies[abs_path] = text
 
-        self._thread_pool.start(self._named_value_finder.run_with_local_copies(local_copies, abs_path))
+        self._thread_pool.start(self._reference_finder.run_with_local_copies(local_copies, abs_path))
 
     def _on_open(self):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():
