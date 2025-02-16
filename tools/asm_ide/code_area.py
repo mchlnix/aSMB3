@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, Signal, SignalInstance
+from PySide6.QtCore import QPoint, Qt, QTimer, Signal, SignalInstance
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -302,7 +302,19 @@ class CodeArea(QPlainTextEdit):
             self._redirect_pop_up.close()
 
         self._redirect_pop_up = RedirectPopup(definition, references, self)
-        self._redirect_pop_up.move(e.pos())
+        self._redirect_pop_up.table_widget.reference_clicked.connect(self.redirect_clicked.emit)
+
+        self._redirect_pop_up.table_widget.updateGeometry()
+
+        self._redirect_pop_up.resize_for_height(self.viewport().height())
+
+        lower_bound = self.viewport().rect().bottom()
+        if e.pos().y() + self._redirect_pop_up.sizeHint().height() > lower_bound:
+            pos = QPoint(e.pos().x(), max(0, lower_bound - self._redirect_pop_up.sizeHint().height()))
+        else:
+            pos = e.pos()
+
+        self._redirect_pop_up.move(pos)
         self._redirect_pop_up.show()
         # self.redirect_clicked.emit(definition.origin_file, definition.origin_line_no)
 
