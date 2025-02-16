@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QKeyEvent
 from PySide6.QtWidgets import (
@@ -28,18 +30,26 @@ class RedirectPopup(QWidget):
         self._layout = QHBoxLayout()
         self.setLayout(self._layout)
 
-        widget = ReferenceTableWidget(definition, references)
+        self.table_widget = ReferenceTableWidget(definition, references)
 
-        self._layout.addWidget(widget)
+        self._layout.addWidget(self.table_widget)
 
-        widget.setFocus()
+        self.table_widget.setFocus()
+
+    def resize_for_height(self, height: int):
+        if height > self.table_widget.sizeHint().height():
+            return
+
+        current_width = self.table_widget.sizeHint().width()
+
+        self.resize(current_width + self.table_widget.verticalScrollBar().width(), height)
 
 
 class ReferenceTableWidget(QTableWidget):
     _DEFINITION_LABEL_ROW = 0
     _REFERENCE_LABEL_ROW = 2
 
-    reference_clicked = Signal(str, int)
+    reference_clicked = Signal(Path, int)
 
     def __init__(self, definition: ReferenceDefinition, references: list[ReferenceDefinition], parent=None):
         super(ReferenceTableWidget, self).__init__(parent)
@@ -56,6 +66,7 @@ class ReferenceTableWidget(QTableWidget):
         self._add_definition_row(definition)
         self._add_reference_rows(references)
 
+        self.resizeColumnsToContents()
         self.resizeRowsToContents()
 
     def _setup_widget(self):
@@ -74,6 +85,7 @@ class ReferenceTableWidget(QTableWidget):
         self.cellClicked.connect(self._on_click)
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setVisible(False)
         self.verticalHeader().setVisible(False)
 
@@ -110,7 +122,10 @@ class ReferenceTableWidget(QTableWidget):
         line_number_item.setFont(self._bold_font)
         line_number_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-        self._add_row(file_item, line_number_item, QTableWidgetItem(definition.line))
+        line_item = QTableWidgetItem(definition.line)
+        line_item.setFont(self._bold_font)
+
+        self._add_row(file_item, line_number_item, line_item)
 
         self._select_row(1)
 
@@ -131,13 +146,16 @@ class ReferenceTableWidget(QTableWidget):
             line_number_item.setForeground(QBrush(QColor.fromRgb(0x2C91AF)))
             line_number_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
+            line_item = QTableWidgetItem(reference.line)
+
             if last_file != reference.origin_file:
                 last_file = reference.origin_file
 
                 file_item.setFont(self._bold_font)
                 line_number_item.setFont(self._bold_font)
+                line_item.setFont(self._bold_font)
 
-            self._add_row(file_item, line_number_item, QTableWidgetItem(reference.line))
+            self._add_row(file_item, line_number_item, line_item)
 
     def _add_row(self, *cells: QTableWidgetItem | str):
         for column, cell in enumerate(cells):
@@ -158,7 +176,7 @@ class ReferenceTableWidget(QTableWidget):
         if row in (self._DEFINITION_LABEL_ROW, self._REFERENCE_LABEL_ROW):
             return
 
-        file_path = self.item(row, 0).text()
+        file_path = Path(self.item(row, 0).text())
         line_number = int(self.item(row, 1).text())
 
         self.reference_clicked.emit(file_path, line_number)
@@ -171,10 +189,13 @@ class ReferenceTableWidget(QTableWidget):
 
         event.accept()
 
+    def focusOutEvent(self, event):
+        self.close()
+
     def close(self):
         return self.parent().close()
 
     def sizeHint(self):
-        width = sum(self.columnWidth(column_index) for column_index in range(self.columnCount() + 1)) + 2
+        width = sum(self.columnWidth(column_index) for column_index in range(self.columnCount() + 1)) + 20
 
         return QSize(width, self.rowCount() * self.rowHeight(0) + 2)
