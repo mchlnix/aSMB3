@@ -21,9 +21,11 @@ class SearchBar(QWidget):
         self._layout = QHBoxLayout(self)
 
         self._search_input = QLineEdit()
+        self._search_input.setAutoFillBackground(True)
         self._search_input.textChanged.connect(lambda _: self.text_changed.emit())
 
         self._highlight_all_checkbox = QCheckBox("Highlight All")
+        self._highlight_all_checkbox.setAutoFillBackground(True)
         self._highlight_all_checkbox.setChecked(True)
         self._highlight_all_checkbox.stateChanged.connect(lambda _: self.settings_changed.emit())
 

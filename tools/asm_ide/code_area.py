@@ -243,7 +243,7 @@ class CodeArea(QPlainTextEdit):
         tooltip = QToolTip()
         tooltip.setFont(QFont("Monospace", 14))
 
-        name, value, file, line_no, nv_type = self._named_value_finder.definitions[word]
+        name, value, file, line_no, nv_type, line = self._named_value_finder.definitions[word]
 
         if nv_type == ReferenceType.CONSTANT:
             self.syntax_highlighter.const_under_cursor = word
@@ -254,11 +254,11 @@ class CodeArea(QPlainTextEdit):
 
         tooltip_text = f"{file}+{line_no}: {name} = {value}"
 
-        if self._named_value_finder.name_to_locations.get(name, False):
+        if self._named_value_finder.name_to_references.get(name, False):
             tooltip_text += "\n\nReferenced at:"
 
-            for index, (file_path, line_no) in enumerate(sorted(self._named_value_finder.name_to_locations[name]), 1):
-                tooltip_text += f"\n{file_path}+{line_no}"
+            for index, reference in enumerate(sorted(self._named_value_finder.name_to_references[name]), 1):
+                tooltip_text += f"\n{reference.origin_file}+{reference.origin_line_no}: {reference.line}"
 
                 if index == _MAX_TOOLTIP_RESULTS:
                     tooltip_text += "\n  ..."
@@ -286,9 +286,10 @@ class CodeArea(QPlainTextEdit):
         text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
         word = text_cursor.selectedText().strip()
 
-        info = self._named_value_finder.definitions.get(word, None)
+        definition = self._named_value_finder.definitions.get(word, None)
+        references = self._named_value_finder.name_to_references.get(word, [])
 
-        if info is None:
+        if definition is None or not references:
             return super().mouseReleaseEvent(e)
 
         if not ctrl_is_pressed():

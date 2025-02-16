@@ -15,11 +15,6 @@ _LABEL_DEF_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:")
 _CONST_LABEL_CALL_RAM_VAR_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)")
 
 
-# _HEX_NUMBER_COLOR = QColor.fromRgb(150, 150, 0)
-# _BIN_NUMBER_COLOR = QColor.fromRgb(0, 200, 200)
-# _STRING_COLOR = QColor.fromRgb(255, 153, 0)
-# _COMMENT_COLOR = QColor.fromRgb(77, 153, 0)
-# _LABEL_COLOR = QColor.fromRgb(153, 0, 153)
 _DEC_NUMBER_COLOR = QColor.fromRgb(255, 0, 0)
 _HEX_NUMBER_COLOR = QColor.fromRgb(0x986800)
 _BIN_NUMBER_COLOR = QColor.fromRgb(0x2C91AF)
@@ -30,7 +25,6 @@ _COMMENT_COLOR = QColor.fromRgb(0xA0A1A7)
 _LABEL_COLOR = QColor.fromRgb(0xA626A4)
 _RAM_VARIABLE_COLOR = QColor.fromRgb(0xE45649)
 
-# _INSTRUCTION_COLOR = QColor.fromRgb(255, 0, 0)
 _INSTRUCTION_COLOR = QColor.fromRgb(0x3E4047)
 
 _DEFAULT_TEXT_COLOR = QColor.fromRgb(0x383A42)
@@ -101,49 +95,51 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
             self.setFormat(start, directive_length, _DIRECTIVE_COLOR)
 
         for expression, color in zip(_REGEXS, _COLORS):
-            i = expression.globalMatch(line)
-            while i.hasNext():
-                match = i.next()
+            match_iterator = expression.globalMatch(line)
+
+            while match_iterator.hasNext():
+                match = match_iterator.next()
 
                 # skip the 0th capture group, which is the whole match
                 for captured_index in range(1, match.lastCapturedIndex() + 1):
                     # intervene, if this is a constant, ram variable or label under the mouse cursor
-                    if expression == _CONST_LABEL_CALL_RAM_VAR_REGEX:
+                    if expression != _CONST_LABEL_CALL_RAM_VAR_REGEX:
+                        self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
 
-                        if match.capturedView(captured_index) in [
-                            self.const_under_cursor,
-                            self.ram_variable_under_cursor,
-                            self.label_under_cursor,
-                        ]:
-                            if match.capturedView(captured_index) == self.const_under_cursor:
-                                text_format = _CLICKABLE_CONST_COLOR
-                            elif match.capturedView(captured_index) == self.ram_variable_under_cursor:
-                                text_format = _CLICKABLE_RAM_VAR_COLOR
-                            else:
-                                text_format = _CLICKABLE_LABEL_COLOR
-
-                            self.setFormat(
-                                match.capturedStart(captured_index),
-                                match.capturedLength(captured_index),
-                                text_format.toCharFormat(),
-                            )
-
-                            continue
-
-                        const_ram_or_label = match.capturedView(captured_index).strip()
-
-                        if const_ram_or_label not in self.named_value_finder.definitions:
-                            continue
-
-                        *_, nv_type = self.named_value_finder.definitions[const_ram_or_label]
-
-                        if nv_type == ReferenceType.CONSTANT:
-                            color = _CONST_COLOR
-                        elif nv_type == ReferenceType.RAM_VAR:
-                            color = _RAM_VARIABLE_COLOR
-                        elif nv_type == ReferenceType.LABEL:
-                            color = _LABEL_COLOR
+                    if match.capturedView(captured_index) in [
+                        self.const_under_cursor,
+                        self.ram_variable_under_cursor,
+                        self.label_under_cursor,
+                    ]:
+                        if match.capturedView(captured_index) == self.const_under_cursor:
+                            text_format = _CLICKABLE_CONST_COLOR
+                        elif match.capturedView(captured_index) == self.ram_variable_under_cursor:
+                            text_format = _CLICKABLE_RAM_VAR_COLOR
                         else:
-                            continue
+                            text_format = _CLICKABLE_LABEL_COLOR
+
+                        self.setFormat(
+                            match.capturedStart(captured_index),
+                            match.capturedLength(captured_index),
+                            text_format.toCharFormat(),
+                        )
+
+                        continue
+
+                    const_ram_or_label = match.capturedView(captured_index).strip()
+
+                    if const_ram_or_label not in self.named_value_finder.definitions:
+                        continue
+
+                    *_, nv_type, _ = self.named_value_finder.definitions[const_ram_or_label]
+
+                    if nv_type == ReferenceType.CONSTANT:
+                        color = _CONST_COLOR
+                    elif nv_type == ReferenceType.RAM_VAR:
+                        color = _RAM_VARIABLE_COLOR
+                    elif nv_type == ReferenceType.LABEL:
+                        color = _LABEL_COLOR
+                    else:
+                        continue
 
                     self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
