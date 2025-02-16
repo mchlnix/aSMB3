@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 from foundry import ctrl_is_pressed
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
+from tools.asm_ide.redirect_popup import RedirectPopup
 from tools.asm_ide.reference_finder import ReferenceFinder, ReferenceType
 from tools.asm_ide.search_bar import SearchBar
 
@@ -100,6 +101,8 @@ class CodeArea(QPlainTextEdit):
         self._text_change_delay_timer.timeout.connect(self.contents_changed.emit)
 
         self.document().contentsChange.connect(self._maybe_trigger_timer)
+
+        self._redirect_pop_up: RedirectPopup | None = None
 
     def _maybe_trigger_timer(self, _: int, chars_added: int, chars_removed: int) -> None:
         """
@@ -295,7 +298,13 @@ class CodeArea(QPlainTextEdit):
         if not ctrl_is_pressed():
             return super().mouseReleaseEvent(e)
 
-        self.redirect_clicked.emit(info.origin_file, info.origin_line_no)
+        if self._redirect_pop_up is not None:
+            self._redirect_pop_up.close()
+
+        self._redirect_pop_up = RedirectPopup(definition, references, self)
+        self._redirect_pop_up.move(e.pos())
+        self._redirect_pop_up.show()
+        # self.redirect_clicked.emit(definition.origin_file, definition.origin_line_no)
 
         return super().mouseReleaseEvent(e)
 
