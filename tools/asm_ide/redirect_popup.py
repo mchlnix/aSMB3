@@ -34,6 +34,9 @@ class RedirectPopup(QWidget):
 
 
 class ReferenceTableWidget(QTableWidget):
+    _DEFINITION_LABEL_ROW = 0
+    _REFERENCE_LABEL_ROW = 2
+
     def __init__(self, definition: ReferenceDefinition, references: list[ReferenceDefinition], parent=None):
         super(ReferenceTableWidget, self).__init__(parent)
 
@@ -57,12 +60,15 @@ class ReferenceTableWidget(QTableWidget):
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setAutoFillBackground(True)
 
+        self.setMouseTracking(True)  # for the cellEntered signal to trigger
+
         self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         self.setFont(QFont("Monospace", 14))
 
     def _setup_table(self, references: list[ReferenceDefinition]):
         self.setSelectionBehavior(self.SelectionBehavior.SelectRows)
         self.setSelectionMode(self.SelectionMode.SingleSelection)
+        self.cellEntered.connect(self._select_row)
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.horizontalHeader().setVisible(False)
@@ -87,6 +93,7 @@ class ReferenceTableWidget(QTableWidget):
         self._add_row(label_item)
 
     def _add_definition_row(self, definition):
+        assert self._next_row_index == self._DEFINITION_LABEL_ROW
         self._add_label_row("Definition:")
 
         file_item = QTableWidgetItem(str(definition.origin_file))
@@ -102,10 +109,13 @@ class ReferenceTableWidget(QTableWidget):
 
         self._add_row(file_item, line_number_item, QTableWidgetItem(definition.line))
 
+        self._select_row(1)
+
     def _add_reference_rows(self, references):
         if not references:
             return
 
+        assert self._next_row_index == self._REFERENCE_LABEL_ROW
         self._add_label_row("References:")
 
         last_file = ""
@@ -134,6 +144,12 @@ class ReferenceTableWidget(QTableWidget):
             self.setItem(self._next_row_index, column, cell)
 
         self._next_row_index += 1
+
+    def _select_row(self, row: int, _column: int = -1):
+        if row in (self._DEFINITION_LABEL_ROW, self._REFERENCE_LABEL_ROW):
+            return
+
+        self.selectRow(row)
 
     def sizeHint(self):
         width = sum(self.columnWidth(column_index) for column_index in range(self.columnCount() + 1)) + 2
