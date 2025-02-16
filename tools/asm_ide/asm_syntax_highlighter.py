@@ -68,10 +68,10 @@ _COLORS = [
 
 
 class AsmSyntaxHighlighter(QSyntaxHighlighter):
-    def __init__(self, parent, named_value_finder: ReferenceFinder):
+    def __init__(self, parent, reference_finder: ReferenceFinder):
         super(AsmSyntaxHighlighter, self).__init__(parent)
 
-        self.named_value_finder = named_value_finder
+        self._reference_finder = reference_finder
 
         # todo: with ReferenceType, this should be reducible to one member
         self.const_under_cursor = ""
@@ -128,10 +128,10 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
 
                     const_ram_or_label = match.capturedView(captured_index).strip()
 
-                    if const_ram_or_label not in self.named_value_finder.definitions:
+                    if const_ram_or_label not in self._reference_finder.definitions:
                         continue
 
-                    *_, nv_type, _ = self.named_value_finder.definitions[const_ram_or_label]
+                    *_, nv_type, _ = self._reference_finder.definitions[const_ram_or_label]
 
                     if nv_type == ReferenceType.CONSTANT:
                         color = _CONST_COLOR
