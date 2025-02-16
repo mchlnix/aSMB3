@@ -1,5 +1,5 @@
-from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QBrush, QColor, QFont
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QKeyEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
@@ -32,10 +32,14 @@ class RedirectPopup(QWidget):
 
         self._layout.addWidget(widget)
 
+        widget.setFocus()
+
 
 class ReferenceTableWidget(QTableWidget):
     _DEFINITION_LABEL_ROW = 0
     _REFERENCE_LABEL_ROW = 2
+
+    reference_clicked = Signal(str, int)
 
     def __init__(self, definition: ReferenceDefinition, references: list[ReferenceDefinition], parent=None):
         super(ReferenceTableWidget, self).__init__(parent)
@@ -52,8 +56,6 @@ class ReferenceTableWidget(QTableWidget):
         self._add_definition_row(definition)
         self._add_reference_rows(references)
 
-        self.setFocus()
-
         self.resizeRowsToContents()
 
     def _setup_widget(self):
@@ -69,6 +71,7 @@ class ReferenceTableWidget(QTableWidget):
         self.setSelectionBehavior(self.SelectionBehavior.SelectRows)
         self.setSelectionMode(self.SelectionMode.SingleSelection)
         self.cellEntered.connect(self._select_row)
+        self.cellClicked.connect(self._on_click)
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.horizontalHeader().setVisible(False)
@@ -150,6 +153,26 @@ class ReferenceTableWidget(QTableWidget):
             return
 
         self.selectRow(row)
+
+    def _on_click(self, row: int, column: int):
+        if row in (self._DEFINITION_LABEL_ROW, self._REFERENCE_LABEL_ROW):
+            return
+
+        file_path = self.item(row, 0).text()
+        line_number = int(self.item(row, 1).text())
+
+        self.reference_clicked.emit(file_path, line_number)
+
+        self.close()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
+
+        event.accept()
+
+    def close(self):
+        return self.parent().close()
 
     def sizeHint(self):
         width = sum(self.columnWidth(column_index) for column_index in range(self.columnCount() + 1)) + 2
