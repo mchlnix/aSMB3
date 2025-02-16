@@ -192,7 +192,7 @@ class ReferenceTableWidget(QTableWidget):
         if row in (self._DEFINITION_LABEL_ROW, self._REFERENCE_LABEL_ROW):
             return
 
-        file_path = Path(self.item(row, 0).text())
+        file_path = Path(self.item(row, 0).text().strip())
         line_number = int(self.item(row, 1).text())
 
         self.reference_clicked.emit(file_path, line_number)
