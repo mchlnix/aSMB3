@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal, SignalInstance
 from PySide6.QtGui import QBrush, QColor, QFont, QKeyEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -51,6 +51,9 @@ class ReferenceTableWidget(QTableWidget):
 
     reference_clicked = Signal(Path, int)
 
+    cellEntered: SignalInstance(int, int)
+    cellClicked: SignalInstance(int, int)
+
     def __init__(self, definition: ReferenceDefinition, references: list[ReferenceDefinition], parent=None):
         super(ReferenceTableWidget, self).__init__(parent)
 
@@ -79,8 +82,11 @@ class ReferenceTableWidget(QTableWidget):
         self.setFont(QFont("Monospace", 14))
 
     def _setup_table(self, references: list[ReferenceDefinition]):
+        self.setShowGrid(False)
+
         self.setSelectionBehavior(self.SelectionBehavior.SelectRows)
         self.setSelectionMode(self.SelectionMode.SingleSelection)
+
         self.cellEntered.connect(self._select_row)
         self.cellClicked.connect(self._on_click)
 
@@ -111,18 +117,13 @@ class ReferenceTableWidget(QTableWidget):
         assert self._next_row_index == self._DEFINITION_LABEL_ROW
         self._add_label_row("Definition:")
 
-        file_item = QTableWidgetItem(str(definition.origin_file))
-
-        file_item.setForeground(QBrush(QColor.fromRgb(0xA626A4)))
+        file_item = self._make_file_path_item(definition)
         file_item.setFont(self._bold_font)
 
-        line_number_item = QTableWidgetItem(str(definition.origin_line_no))
-
-        line_number_item.setForeground(QBrush(QColor.fromRgb(0x2C91AF)))
+        line_number_item = self._make_line_number_item(definition)
         line_number_item.setFont(self._bold_font)
-        line_number_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-        line_item = QTableWidgetItem(definition.line)
+        line_item = self._make_line_item(definition)
         line_item.setFont(self._bold_font)
 
         self._add_row(file_item, line_number_item, line_item)
@@ -139,14 +140,9 @@ class ReferenceTableWidget(QTableWidget):
         last_file = ""
 
         for reference in sorted(references, key=_smb3_first_sort_key):
-            file_item = QTableWidgetItem(str(reference.origin_file))
-            file_item.setForeground(QBrush(QColor.fromRgb(0xA626A4)))
-
-            line_number_item = QTableWidgetItem(str(reference.origin_line_no))
-            line_number_item.setForeground(QBrush(QColor.fromRgb(0x2C91AF)))
-            line_number_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
-            line_item = QTableWidgetItem(reference.line)
+            file_item = self._make_file_path_item(reference)
+            line_number_item = self._make_line_number_item(reference)
+            line_item = self._make_line_item(reference)
 
             if last_file != reference.origin_file:
                 last_file = reference.origin_file
@@ -165,6 +161,26 @@ class ReferenceTableWidget(QTableWidget):
             self.setItem(self._next_row_index, column, cell)
 
         self._next_row_index += 1
+
+    @staticmethod
+    def _make_file_path_item(definition):
+        file_item = QTableWidgetItem(f"{definition.origin_file}   ")
+        file_item.setForeground(QBrush(QColor.fromRgb(0xA626A4)))
+        return file_item
+
+    @staticmethod
+    def _make_line_number_item(reference: ReferenceDefinition):
+        line_number_item = QTableWidgetItem(str(reference.origin_line_no))
+
+        line_number_item.setForeground(QBrush(QColor.fromRgb(0x2C91AF)))
+        line_number_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        return line_number_item
+
+    @staticmethod
+    def _make_line_item(definition):
+        line_item = QTableWidgetItem(f"   {definition.line}")
+        return line_item
 
     def _select_row(self, row: int, _column: int = -1):
         if row in (self._DEFINITION_LABEL_ROW, self._REFERENCE_LABEL_ROW):
