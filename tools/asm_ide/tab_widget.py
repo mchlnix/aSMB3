@@ -77,8 +77,8 @@ class TabWidget(QTabWidget):
         code_area.text_document.contentsChanged.connect(self._emit_undo_redo_state)
 
         code_area.text_position_clicked.connect(lambda index: self.text_position_clicked.emit(abs_path, index))
-        # set the first navigation point of an opened file to the top
-        # todo: maybe not always good? like on redirects? Maybe only for the actual first one, i.e. smb3.asm
+        # Set the first navigation point of an opened file to the top.
+        # Will be overwritten when the user clicks somewhere into the document.
         code_area.text_position_clicked.emit(0)
 
         code_area.moveCursor(QTextCursor.Start)
