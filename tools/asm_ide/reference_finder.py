@@ -168,13 +168,13 @@ class ReferenceFinder(QRunnable):
             self._find_definitions_in_line(line, line_no, rel_path)
 
     def _find_definitions_in_line(self, line, line_no, rel_path):
-        line = strip_comment(line)
+        clean_line = strip_comment(line)
 
         for regex, nv_type in zip(
             (_CONST_REGEX, _RAM_REGEX, _LABEL_REGEX),
             (ReferenceType.CONSTANT, ReferenceType.RAM_VAR, ReferenceType.LABEL),
         ):
-            match_iterator = regex.globalMatch(line)
+            match_iterator = regex.globalMatch(clean_line)
 
             we_matched = match_iterator.hasNext()
 
@@ -185,7 +185,7 @@ class ReferenceFinder(QRunnable):
                 matched_value = match.capturedView(2)
 
                 self._definitions[matched_name] = ReferenceDefinition(
-                    matched_name, matched_value, rel_path, line_no, nv_type, line
+                    matched_name, matched_value, rel_path, line_no, nv_type, " ".join(line.split())
                 )
 
             if we_matched:
@@ -213,15 +213,17 @@ class ReferenceFinder(QRunnable):
             self._find_references_in_line(line, line_no, rel_file_to_parse)
 
     def _find_references_in_line(self, line, line_no, rel_path):
-        line = strip_comment(line)
-        match_iterator = _CONST_LABEL_CALL_RAM_VAR_REGEX.globalMatch(line)
+        clean_line = strip_comment(line)
+        match_iterator = _CONST_LABEL_CALL_RAM_VAR_REGEX.globalMatch(clean_line)
 
         while match_iterator.hasNext():
             match = match_iterator.next()
 
             matched_name = match.capturedView(1)
 
-            reference = ReferenceDefinition(matched_name, "", rel_path, line_no, ReferenceType.UNSET, line)
+            reference = ReferenceDefinition(
+                matched_name, "", rel_path, line_no, ReferenceType.UNSET, " ".join(line.split())
+            )
 
             self._name_to_references[matched_name].add(reference)
 

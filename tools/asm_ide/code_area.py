@@ -298,27 +298,41 @@ class CodeArea(QPlainTextEdit):
         if not ctrl_is_pressed():
             return super().mouseReleaseEvent(e)
 
+        self._create_redirect_popup(definition, references)
+
+        point = self._find_open_point(e)
+
+        current_line_number = self.textCursor().blockNumber() + 1
+
+        self._redirect_pop_up.table_widget.highlight_row(definition.origin_file, current_line_number)
+
+        self._redirect_pop_up.move(point)
+        self._redirect_pop_up.show()
+
+        return super().mouseReleaseEvent(e)
+
+    def _find_open_point(self, e):
+        x = e.pos().x() + self.viewportMargins().left()
+        y = e.pos().y()
+
+        lower_bound = self.viewport().rect().bottom()
+
+        if e.pos().y() + self._redirect_pop_up.sizeHint().height() > lower_bound:
+            y = max(0, lower_bound - self._redirect_pop_up.sizeHint().height())
+
+        pos = QPoint(x, y)
+
+        return pos
+
+    def _create_redirect_popup(self, definition, references):
         if self._redirect_pop_up is not None:
             self._redirect_pop_up.close()
 
         self._redirect_pop_up = RedirectPopup(definition, references, self)
         self._redirect_pop_up.table_widget.reference_clicked.connect(self.redirect_clicked.emit)
-
         self._redirect_pop_up.table_widget.updateGeometry()
 
         self._redirect_pop_up.resize_for_height(self.viewport().height())
-
-        lower_bound = self.viewport().rect().bottom()
-        if e.pos().y() + self._redirect_pop_up.sizeHint().height() > lower_bound:
-            pos = QPoint(e.pos().x(), max(0, lower_bound - self._redirect_pop_up.sizeHint().height()))
-        else:
-            pos = e.pos()
-
-        self._redirect_pop_up.move(pos)
-        self._redirect_pop_up.show()
-        # self.redirect_clicked.emit(definition.origin_file, definition.origin_line_no)
-
-        return super().mouseReleaseEvent(e)
 
     def resizeEvent(self, event: QResizeEvent):
         self._search_bar.update_position()
