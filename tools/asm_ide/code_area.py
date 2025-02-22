@@ -329,7 +329,7 @@ class CodeArea(QPlainTextEdit):
             self._redirect_pop_up.close()
 
         self._redirect_pop_up = RedirectPopup(definition, references, self)
-        self._redirect_pop_up.table_widget.reference_clicked.connect(self.redirect_clicked.emit)
+        self._redirect_pop_up.table_widget.row_clicked.connect(self.redirect_clicked.emit)
         self._redirect_pop_up.table_widget.updateGeometry()
 
         self._redirect_pop_up.resize_for_height(self.viewport().height())
