@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import QSize, QThreadPool
+from PySide6.QtCore import QPoint, QSize, QThreadPool
 from PySide6.QtGui import (
     QCloseEvent,
     QKeySequence,
@@ -11,6 +11,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
 
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
+from tools.asm_ide.global_search_popup import GlobalSearchPopup
 from tools.asm_ide.menu_toolbar import MenuToolbar
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.reference_finder import ReferenceFinder
@@ -24,8 +25,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("ASMB3 IDE")
         self.setMouseTracking(True)
 
-        self._thread_pool = QThreadPool()
-        self._thread_pool.setMaxThreadCount(1)
+        self._search_index_threads = QThreadPool()
+        self._search_index_threads.setMaxThreadCount(1)
+
+        self._global_search_widget: GlobalSearchPopup = None
 
         self._tab_widget = None
 
@@ -43,8 +46,9 @@ class MainWindow(QMainWindow):
 
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp), self, self._tab_widget.to_previous_tab)
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown), self, self._tab_widget.to_next_tab)
-        QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_F), self, self._tab_widget.focus_search_bar)
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S), self, self._tab_widget.save_current_file)
+        QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_F), self, self._tab_widget.focus_search_bar)
+        QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_F), self, self._start_global_search)
 
         self.setCentralWidget(self._tab_widget)
 
@@ -117,19 +121,61 @@ class MainWindow(QMainWindow):
     def sizeHint(self):
         return QSize(1800, 1600)
 
-    def _update_search_index(self, abs_path: Path):
-        local_copies: dict[Path, str] = dict()
+    @property
+    def prg_files(self) -> list[Path]:
+        prg_dir = self._root_path / "PRG"
 
-        for tab_index, code_area in enumerate(self._tab_widget.widgets()):
-            if not code_area.document().isModified():
-                continue
+        return sorted(prg_dir.glob("prg[0-9]*.asm"))
 
-            abs_path = self._tab_widget.tab_index_to_path[tab_index]
-            text = code_area.document().toPlainText()
+    def _start_global_search(self):
+        current_code_area = self._tab_widget.currentWidget()
 
-            local_copies[abs_path] = text
+        if current_code_area is None:
+            return
 
-        self._thread_pool.start(self._reference_finder.run_with_local_copies(local_copies, abs_path))
+        data_by_file = self._get_asm_with_local_copies()
+
+        self._global_search_widget = GlobalSearchPopup(self._tab_widget, "", data_by_file)
+        self._global_search_widget.search_result_clicked.connect(self.follow_redirect)
+
+        self._global_search_widget.setMaximumSize(
+            current_code_area.size() - QSize(40 + current_code_area.viewportMargins().left(), 40)
+        )
+
+        pos_in_self = current_code_area.mapTo(self._tab_widget, current_code_area.pos())
+        pos_in_self += QPoint(current_code_area.viewportMargins().left(), 0)
+        pos_in_self += QPoint(20, 20)
+
+        self._global_search_widget.move(pos_in_self)
+
+        self._global_search_widget.show()
+
+    def _update_search_index(self, path_of_changed_file: Path):
+        local_copies = self._get_asm_with_local_copies()
+
+        # todo: update this method, since local copies just has data for all files now
+        self._search_index_threads.start(
+            self._reference_finder.run_with_local_copies(local_copies, path_of_changed_file)
+        )
+
+    def _get_asm_with_local_copies(self):
+        asm: dict[Path, str] = dict()
+
+        for asm_path in [self._root_path / "smb3.asm"] + self.prg_files:
+            if asm_path in self._tab_widget.tab_index_to_path:
+                tab_index = self._tab_widget.tab_index_to_path.index(asm_path)
+
+                code_area = self._tab_widget.widget(tab_index)
+
+                if code_area is None:
+                    continue
+
+                asm[asm_path.relative_to(self._root_path)] = code_area.text_document.toPlainText()
+
+            else:
+                asm[asm_path.relative_to(self._root_path)] = asm_path.read_text()
+
+        return asm
 
     def _on_open(self):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():

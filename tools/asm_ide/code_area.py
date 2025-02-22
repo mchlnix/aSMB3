@@ -30,7 +30,7 @@ from tools.asm_ide.search_bar import SearchBar
 
 _MAX_TOOLTIP_RESULTS = 30
 
-_TEXT_CHANGE_TRIGGER_DELAY = 1000  # milli seconds
+_TEXT_CHANGE_TRIGGER_DELAY = 1000  # milliseconds
 
 
 class CodeArea(QPlainTextEdit):
@@ -302,9 +302,9 @@ class CodeArea(QPlainTextEdit):
 
         point = self._find_open_point(e)
 
-        current_line_number = self.textCursor().blockNumber() + 1
-
-        self._redirect_pop_up.table_widget.highlight_row(definition.origin_file, current_line_number)
+        # highlight current line in the pop up
+        # current_line_number = self.textCursor().blockNumber() + 1
+        # self._redirect_pop_up.table_widget.highlight_row(definition.origin_file, current_line_number)
 
         self._redirect_pop_up.move(point)
         self._redirect_pop_up.show()
