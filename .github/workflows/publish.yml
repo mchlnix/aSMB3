@@ -23,10 +23,10 @@ jobs:
         python3.11 -m pip install -r dev-requirements.txt
 
     - name: Black
-      run: python3.11 -m black -l 120 --check --diff foundry scribe smb3parse
+      run: python3.11 -m black -l 120 --check --diff tools
 
     - name: Ruff
-      run: python3.11 -m ruff check foundry scribe smb3parse
+      run: python3.11 -m ruff check tools
 
   static_analysis:
     name: Static Analysis
@@ -48,10 +48,10 @@ jobs:
         python3.11 -m pip install refurb mypy
 
     - name: mypy
-      run: python3.11 -m mypy foundry scribe smb3parse
+      run: python3.11 -m mypy tools
 
     - name: refurb
-      run: python3.11 -m refurb foundry scribe smb3parse
+      run: python3.11 -m refurb tools
 
 
   set_nightly_tag:
@@ -110,8 +110,7 @@ jobs:
           - {os: windows-2019, prefix: 'win64', suffix: '.exe', architecture: 'x64'}
           - {os: macos-latest, prefix: 'osx', suffix: '', architecture: 'x64'}
         editor:
-          - {name: 'smb3-foundry'}
-          - {name: 'smb3-scribe'}
+          - {name: 'aSMB3'}
 
     steps:
       - name: Check out
@@ -149,50 +148,13 @@ jobs:
           name: ${{ matrix.cfg.prefix }}-${{ matrix.editor.name }}${{ matrix.cfg.suffix }}
           path: dist/${{ matrix.cfg.prefix }}-${{ matrix.editor.name }}${{ matrix.cfg.suffix }}
 
-  build_manual:
-    needs: code_style
-    if: startsWith(github.ref, 'refs/tags/')
-
-    name: Build Manual
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out
-        uses: actions/checkout@v3
-
-      - name: Get Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install pandoc texlive-latex-base texlive-fonts-recommended texlive-extra-utils texlive-latex-extra
-
-      - name: Build PDFs
-        run: |
-          pushd manual/foundry/
-          pandoc foundry-manual.md -o manual-foundry.pdf
-          popd
-          pushd manual/scribe/
-          pandoc scribe-manual.md -o manual-scribe.pdf
-          popd
-
-
-      - name: Upload Foundry Manual
-        uses: actions/upload-artifact@v4
-        with:
-          path: manual/foundry/manual-foundry.pdf
-          name: manual-foundry
-
-      - name: Upload Scribe Manual
-        uses: actions/upload-artifact@v4
-        with:
-          path: manual/scribe/manual-scribe.pdf
-          name: manual-scribe
-
-  # We're forced to create a separate publish job since the create-release
+  # We're forced to create a separate publish-job since the create-release
   # action fails if it is run twice on the same tag. But we have multiple
   # build systems (Windows, Linux, OSX) and only want one release.
   publish:
-    needs: [build_editor, build_manual]
+    needs: [build_editor]
     name: "Publish"
-    runs-on: ubuntu-latest  # this doesn't matter as it's only codestyle and artifact collection
+    runs-on: ubuntu-latest  # this doesn't matter as it's only codestyle and artefact collection
     steps:
       - name: Check out
         uses: actions/checkout@v3
@@ -225,7 +187,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ steps.release_info.outputs.RELEASE_NAME }}
@@ -240,82 +202,32 @@ jobs:
 
       # upload-release-asset doesn't accept a directory or an array
       # of files, so we must individually upload each one
-      - name: Upload SMB3 Foundry Linux
+      - name: Upload aSMB3 Linux
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/linux-smb3-foundry/linux-smb3-foundry"
-          asset_name: "linux-smb3-foundry"
+          asset_path: "artifacts/linux-aSMB3/linux-aSMB3"
+          asset_name: "linux-aSMB3"
           asset_content_type: application/octet-stream
 
-      - name: Upload SMB3 Foundry OSX
+      - name: Upload aSMB3 OSX
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/osx-smb3-foundry/osx-smb3-foundry"
-          asset_name: "osx-smb3-foundry"
+          asset_path: "artifacts/osx-aSMB3/osx-aSMB3"
+          asset_name: "osx-aSMB3"
           asset_content_type: application/octet-stream
 
-      - name: Upload SMB3 Foundry Windows x64
+      - name: Upload aSMB3 Windows x64
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/win64-smb3-foundry.exe/win64-smb3-foundry.exe"
-          asset_name: "win64-smb3-foundry.exe"
+          asset_path: "artifacts/win64-aSMB3.exe/win64-aSMB3.exe"
+          asset_name: "win64-aSMB3.exe"
           asset_content_type: application/octet-stream
-
-      - name: Upload SMB3 Scribe Linux
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/linux-smb3-scribe/linux-smb3-scribe"
-          asset_name: "linux-smb3-scribe"
-          asset_content_type: application/octet-stream
-
-      - name: Upload SMB3 Scribe OSX
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/osx-smb3-scribe/osx-smb3-scribe"
-          asset_name: "osx-smb3-scribe"
-          asset_content_type: application/octet-stream
-
-      - name: Upload SMB3 Scribe Windows x64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/win64-smb3-scribe.exe/win64-smb3-scribe.exe"
-          asset_name: "win64-smb3-scribe.exe"
-          asset_content_type: application/octet-stream
-
-      - name: Upload SMB3 Foundry Manual
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/manual-foundry/manual-foundry.pdf"
-          asset_name: "manual-foundry.pdf"
-          asset_content_type: application/pdf
-
-      - name: Upload SMB3 Scribe Manual
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "artifacts/manual-scribe/manual-scribe.pdf"
-          asset_name: "manual-scribe.pdf"
-          asset_content_type: application/pdf
