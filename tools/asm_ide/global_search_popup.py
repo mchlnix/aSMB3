@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import NamedTuple
 
 from PySide6.QtCore import QSize, Qt, Signal, SignalInstance
 from PySide6.QtGui import QFocusEvent, QKeyEvent
@@ -9,7 +10,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from typing_extensions import NamedTuple
 
 from tools.asm_ide.table_widget import TableWidget
 
