@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
 from tools.asm_ide.redirect_popup import RedirectPopup
-from tools.asm_ide.reference_finder import ReferenceFinder, ReferenceType
+from tools.asm_ide.reference_finder import ReferenceDefinition, ReferenceFinder, ReferenceType
 from tools.asm_ide.search_bar import SearchBar
 from tools.asm_ide.util import ctrl_is_pressed
 
@@ -45,8 +45,8 @@ class CodeArea(QPlainTextEdit):
     """
     contents_changed = Signal()
 
-    blockCountChanged: SignalInstance(int)
-    cursorPositionChanged: SignalInstance()
+    blockCountChanged: SignalInstance
+    cursorPositionChanged: SignalInstance
 
     def __init__(self, parent, reference_finder: ReferenceFinder):
         super(CodeArea, self).__init__(parent)
@@ -290,7 +290,7 @@ class CodeArea(QPlainTextEdit):
         word = text_cursor.selectedText().strip()
 
         definition = self._reference_finder.definitions.get(word, None)
-        references = self._reference_finder.name_to_references.get(word, [])
+        references: set[ReferenceDefinition] = self._reference_finder.name_to_references.get(word, set())
 
         if definition is None or not references:
             return super().mouseReleaseEvent(e)
@@ -298,7 +298,7 @@ class CodeArea(QPlainTextEdit):
         if not ctrl_is_pressed():
             return super().mouseReleaseEvent(e)
 
-        self._create_redirect_popup(definition, references)
+        self._redirect_pop_up = self._create_redirect_popup(definition, references)
 
         point = self._find_open_point(e)
 
@@ -312,6 +312,9 @@ class CodeArea(QPlainTextEdit):
         return super().mouseReleaseEvent(e)
 
     def _find_open_point(self, e):
+        if self._redirect_pop_up is None:
+            return QPoint()
+
         x = e.pos().x() + self.viewportMargins().left()
         y = e.pos().y()
 
@@ -324,15 +327,17 @@ class CodeArea(QPlainTextEdit):
 
         return pos
 
-    def _create_redirect_popup(self, definition, references):
+    def _create_redirect_popup(self, definition, references) -> RedirectPopup:
         if self._redirect_pop_up is not None:
             self._redirect_pop_up.close()
 
-        self._redirect_pop_up = RedirectPopup(definition, references, self)
-        self._redirect_pop_up.table_widget.row_clicked.connect(self.redirect_clicked.emit)
-        self._redirect_pop_up.table_widget.updateGeometry()
+        redirect_pop_up = RedirectPopup(definition, references, self)
+        redirect_pop_up.table_widget.row_clicked.connect(self.redirect_clicked.emit)
+        redirect_pop_up.table_widget.updateGeometry()
 
-        self._redirect_pop_up.resize_for_height(self.viewport().height())
+        redirect_pop_up.resize_for_height(self.viewport().height())
+
+        return redirect_pop_up
 
     def resizeEvent(self, event: QResizeEvent):
         self._search_bar.update_position()

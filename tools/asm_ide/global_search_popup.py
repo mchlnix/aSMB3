@@ -24,7 +24,7 @@ class SearchResult(NamedTuple):
 
 
 class _SearchInput(QLineEdit):
-    textChanged: SignalInstance(str)
+    textChanged: SignalInstance
 
     def focusOutEvent(self, event: QFocusEvent):
         self.parent().focusOutEvent(event)

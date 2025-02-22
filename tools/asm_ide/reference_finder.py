@@ -49,7 +49,7 @@ class ReferenceFinder(QRunnable):
         self.root_path = root_path
 
         self._local_copies: dict[Path, str] = {}
-        self._currently_open_file: Path = None
+        self._currently_open_file: Path | None = None
         """
         When documents are modified, but not saved yet, we have to use the local copies, instead of the files on disk.
         """
@@ -74,7 +74,7 @@ class ReferenceFinder(QRunnable):
     def prg_count(self):
         return len(self.prg_files)
 
-    def run_with_local_copies(self, local_copies: dict[Path, str], open_file: Path = None):
+    def run_with_local_copies(self, local_copies: dict[Path, str], open_file: Path | None = None):
         self._local_copies = local_copies
         self._currently_open_file = open_file
 
@@ -121,8 +121,9 @@ class ReferenceFinder(QRunnable):
         self._definitions = self.definitions.copy()
         self._name_to_references = self.name_to_references.copy()
 
-        self._remove_all_definitions_of_file(self._currently_open_file)
-        self._parse_file_for_definitions(self._currently_open_file)
+        if self._currently_open_file is not None:
+            self._remove_all_definitions_of_file(self._currently_open_file)
+            self._parse_file_for_definitions(self._currently_open_file)
 
         old_definitions = set(self.definitions.keys())
         new_definitions = set(self._definitions.keys())

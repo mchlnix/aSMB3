@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
 class TableWidget(QTableWidget):
     row_clicked = Signal(Path, int)
 
-    cellEntered: SignalInstance(int, int)
-    cellClicked: SignalInstance(int, int)
+    cellEntered: SignalInstance
+    cellClicked: SignalInstance
 
     def __init__(self, parent=None):
         super(TableWidget, self).__init__(parent)
@@ -25,7 +25,7 @@ class TableWidget(QTableWidget):
 
         self._next_row_index = 0
 
-        self._last_file_path = ""
+        self._last_file_path = Path()
 
     def _setup_widget(self):
         self.setMouseTracking(True)  # for the cellEntered signal to trigger

@@ -33,15 +33,15 @@ class TabWidget(QTabWidget):
     """
     contents_changed = Signal(Path)
 
-    tabCloseRequested: SignalInstance(int)
-    currentChanged: SignalInstance(bool)
+    tabCloseRequested: SignalInstance
+    currentChanged: SignalInstance
 
-    def __init__(self, parent, reference_finder: ReferenceFinder):
+    def __init__(self, parent):
         super(TabWidget, self).__init__(parent)
         self.setMouseTracking(True)
 
         self.tab_index_to_path: list[Path] = []
-        self._reference_finder = reference_finder
+        self.reference_finder: ReferenceFinder | None = None
 
         tab_bar = TabBar(self)
         tab_bar.middle_click_on.connect(self.tabCloseRequested.emit)
@@ -50,6 +50,10 @@ class TabWidget(QTabWidget):
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self._close_tab)
         self.currentChanged.connect(self._on_current_tab_changed)
+
+    @property
+    def current_code_area(self) -> CodeArea | None:
+        return self.currentWidget()
 
     def open_or_switch_file(self, abs_path: Path):
         if abs_path in self.tab_index_to_path:
@@ -61,7 +65,10 @@ class TabWidget(QTabWidget):
             self._load_asm_file(abs_path)
 
     def _load_asm_file(self, abs_path: Path) -> None:
-        code_area = CodeArea(self, self._reference_finder)
+        if self.reference_finder is None:
+            raise ValueError("Error, ReferenceFinder not set")
+
+        code_area = CodeArea(self, self.reference_finder)
         code_area.redirect_clicked.connect(self.redirect_clicked.emit)
         code_area.contents_changed.connect(lambda: self.contents_changed.emit(abs_path))
 
@@ -94,7 +101,10 @@ class TabWidget(QTabWidget):
             self._save_file_at_index(index)
 
     def _save_file_at_index(self, index: int):
-        code_area: CodeArea = self.widget(index)
+        code_area = self.widget(index)
+
+        if code_area is None:
+            return
 
         path = self.tab_index_to_path[index]
         data = code_area.text_document.toPlainText()
@@ -106,7 +116,10 @@ class TabWidget(QTabWidget):
         self._update_title_of_tab_at_index(index)
 
     def scroll_to_line(self, line_no: int):
-        current_code_area: CodeArea = self.currentWidget()
+        current_code_area = self.current_code_area
+
+        if current_code_area is None:
+            return
 
         current_cursor = current_code_area.textCursor()
         current_cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.MoveAnchor)
@@ -114,17 +127,20 @@ class TabWidget(QTabWidget):
 
         current_code_area.setTextCursor(current_cursor)
 
-        self.currentWidget().centerCursor()
+        current_code_area.centerCursor()
 
     def scroll_to_position(self, block_index: int):
-        current_code_area: CodeArea = self.currentWidget()
+        current_code_area = self.current_code_area
+
+        if current_code_area is None:
+            return
 
         current_cursor = current_code_area.textCursor()
         current_cursor.setPosition(block_index, QTextCursor.MoveMode.MoveAnchor)
 
         current_code_area.setTextCursor(current_cursor)
 
-        self.currentWidget().centerCursor()
+        current_code_area.centerCursor()
 
     def _on_current_tab_changed(self):
         self._emit_undo_redo_state()
@@ -140,7 +156,7 @@ class TabWidget(QTabWidget):
         self._update_title_of_tab_at_index(self.currentIndex())
 
         # check for modification status
-        current_document_is_modified = self.currentWidget().text_document.isModified()
+        current_document_is_modified = self.current_code_area and self.current_code_area.text_document.isModified()
 
         if current_document_is_modified or self.count() == 1:
             # if the current document is modified, then any document is modified, too
@@ -160,19 +176,33 @@ class TabWidget(QTabWidget):
 
         tab_title = current_path.name
 
-        if self.widget(index).text_document.isModified():
+        code_area = self.widget(index)
+
+        if code_area is None:
+            return
+
+        if code_area.text_document.isModified():
             tab_title += " *"
 
         self.setTabText(index, tab_title)
 
     def widgets(self) -> Generator[CodeArea, None, None]:
         for tab_index in range(self.count()):
-            yield self.widget(tab_index)
+            widget = self.widget(tab_index)
+
+            if widget is not None:
+                yield widget
 
     def _close_tab(self, index: int):
         path_of_tab = self.tab_index_to_path[index]
 
-        if self.widget(index).text_document.isModified() and not self._ask_for_close_without_saving([str(path_of_tab)]):
+        code_area = self.widget(index)
+
+        if (
+            code_area is None
+            or code_area.text_document.isModified()
+            and not self._ask_for_close_without_saving([str(path_of_tab)])
+        ):
             return
 
         self.tab_index_to_path.pop(index)
@@ -191,7 +221,7 @@ class TabWidget(QTabWidget):
         self.setCurrentIndex(self.currentIndex() - 1)
 
     def on_undo(self):
-        current_code_area: CodeArea | None = self.currentWidget()
+        current_code_area: CodeArea | None = self.current_code_area
 
         if current_code_area is None:
             return
@@ -202,7 +232,7 @@ class TabWidget(QTabWidget):
         self._emit_undo_redo_state()
 
     def on_redo(self):
-        current_code_area: CodeArea | None = self.currentWidget()
+        current_code_area: CodeArea | None = self.current_code_area
 
         if current_code_area is None:
             return
@@ -213,12 +243,12 @@ class TabWidget(QTabWidget):
         self._emit_undo_redo_state()
 
     def _emit_undo_redo_state(self):
-        if self.currentWidget() is None:
+        if self.current_code_area is None:
             self.undo_redo_changed.emit(False, False)
             return
 
-        undo_available = self.currentWidget().text_document.isUndoAvailable()
-        redo_available = self.currentWidget().text_document.isRedoAvailable()
+        undo_available = self.current_code_area.text_document.isUndoAvailable()
+        redo_available = self.current_code_area.text_document.isRedoAvailable()
 
         self.undo_redo_changed.emit(undo_available, redo_available)
 
@@ -259,7 +289,7 @@ class TabWidget(QTabWidget):
         return ret_button == QMessageBox.StandardButton.Yes
 
     def focus_search_bar(self):
-        if self.currentWidget() is None:
+        if self.current_code_area is None:
             return
 
-        self.currentWidget().focus_search_bar()
+        self.current_code_area.focus_search_bar()

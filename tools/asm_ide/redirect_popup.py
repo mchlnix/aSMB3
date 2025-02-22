@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QWidget,
 )
+from pathlib import Path
 
 from tools.asm_ide.reference_finder import ReferenceDefinition, ReferenceType
 from tools.asm_ide.table_widget import TableWidget
@@ -11,7 +12,7 @@ from tools.asm_ide.table_widget import TableWidget
 
 def _smb3_first_sort_key(reference: ReferenceDefinition):
     if reference.origin_file.name == "smb3.asm":
-        return ReferenceDefinition("", "", "a", 0, ReferenceType.UNSET, "")
+        return ReferenceDefinition("", "", Path("a"), 0, ReferenceType.UNSET, "")
     else:
         return reference
 

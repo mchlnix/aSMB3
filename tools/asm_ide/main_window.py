@@ -28,9 +28,11 @@ class MainWindow(QMainWindow):
         self._search_index_threads = QThreadPool()
         self._search_index_threads.setMaxThreadCount(1)
 
-        self._global_search_widget: GlobalSearchPopup = None
+        self._global_search_widget: GlobalSearchPopup | None = None
 
-        self._tab_widget = None
+        self._tab_widget = TabWidget(self)
+        self._tab_widget.contents_changed.connect(self._update_search_index)
+        self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
         self._on_open()
 
@@ -40,9 +42,7 @@ class MainWindow(QMainWindow):
 
         ParsingProgressDialog(self._reference_finder)
 
-        self._tab_widget = TabWidget(self, self._reference_finder)
-        self._tab_widget.contents_changed.connect(self._update_search_index)
-        self._tab_widget.redirect_clicked.connect(self.follow_redirect)
+        self._tab_widget.reference_finder = self._reference_finder
 
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp), self, self._tab_widget.to_previous_tab)
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown), self, self._tab_widget.to_next_tab)
@@ -104,10 +104,15 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
 
     def follow_redirect(self, relative_file_path: Path, line_no: int):
+        current_code_area = self._tab_widget.currentWidget()
+
+        if current_code_area is None:
+            return
+
         self._move_to_line(relative_file_path, line_no)
 
         self._menu_toolbar.push_position(
-            self._root_path / relative_file_path, self._tab_widget.currentWidget().textCursor().position()
+            self._root_path / relative_file_path, current_code_area.textCursor().position()
         )
 
     def _move_to_line(self, relative_file_path: Path, line_no: int):
