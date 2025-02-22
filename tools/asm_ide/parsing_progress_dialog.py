@@ -20,7 +20,7 @@ class ParsingProgressDialog(QProgressDialog):
 
         self.show()
 
-        self._reference_finder.run()
+        self._reference_finder.run_with_local_copies({})()
 
         self.close()
 

@@ -34,7 +34,8 @@ class MainWindow(QMainWindow):
         self._tab_widget.contents_changed.connect(self._update_search_index)
         self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
-        self._on_open()
+        if not self._on_open():
+            quit()
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
@@ -157,11 +158,14 @@ class MainWindow(QMainWindow):
         self._global_search_widget.show()
 
     def _update_search_index(self, path_of_changed_file: Path):
+        if self._tab_widget.reference_finder is None:
+            return
+
         local_copies = self._get_asm_with_local_copies()
 
         # todo: update this method, since local copies just has data for all files now
         self._search_index_threads.start(
-            self._reference_finder.run_with_local_copies(local_copies, path_of_changed_file)
+            self._tab_widget.reference_finder.run_with_local_copies(local_copies, path_of_changed_file)
         )
 
     def _get_asm_with_local_copies(self):
@@ -187,17 +191,22 @@ class MainWindow(QMainWindow):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():
             return False
 
-        # TODO: take out before shipping
-        path = Path("/home/michael/Gits/smb3")
-        # path = self._get_disassembly_root()
+        path = self._get_disassembly_root()
 
         if path is None:
             return False
 
         self._root_path = path
 
+        # todo: make the loading make sense chronologically
         if self._tab_widget:
             self._tab_widget.clear()
+
+            if self._tab_widget.reference_finder:
+                self._tab_widget.reference_finder.root_path = self._root_path
+                ParsingProgressDialog(self._tab_widget.reference_finder)
+
+                self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
 
         # todo only parse the PRG files mentioned in smb3.asm
         return True
