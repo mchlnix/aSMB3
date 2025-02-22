@@ -3,9 +3,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QToolBar, QToolButton
 
-from foundry import icon
-from foundry.gui.FoundryMainWindow import TOOLBAR_ICON_SIZE
 from tools.asm_ide.text_position_stack import TextPositionStack
+from tools.asm_ide.util import TOOLBAR_ICON_SIZE, icon
 
 
 class MenuToolbar(QToolBar):

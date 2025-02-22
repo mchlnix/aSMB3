@@ -21,12 +21,12 @@ from PySide6.QtWidgets import (
     QToolTip,
 )
 
-from foundry import ctrl_is_pressed
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
 from tools.asm_ide.redirect_popup import RedirectPopup
 from tools.asm_ide.reference_finder import ReferenceFinder, ReferenceType
 from tools.asm_ide.search_bar import SearchBar
+from tools.asm_ide.util import ctrl_is_pressed
 
 _MAX_TOOLTIP_RESULTS = 30
 

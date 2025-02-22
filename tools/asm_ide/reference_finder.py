@@ -7,7 +7,7 @@ from typing import NamedTuple
 
 from PySide6.QtCore import QObject, QRegularExpression, QRunnable, Signal
 
-from foundry.data_source import strip_comment
+from tools.asm_ide.util import strip_comment
 
 
 class ReferenceType(Enum):

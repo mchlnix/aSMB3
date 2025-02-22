@@ -1,8 +1,8 @@
 from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat
 
-from foundry.data_source.assembly_parser import _is_generic_directive, _is_instruction
 from tools.asm_ide.reference_finder import ReferenceFinder, ReferenceType
+from tools.asm_ide.util import is_generic_directive, is_instruction
 
 _DEC_NUMBER_REGEX = QRegularExpression("([0-9]+)")
 _HEX_NUMBER_REGEX = QRegularExpression("(\$[A-Fa-f0-9]+)")
@@ -80,14 +80,14 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, line: str, clickable=False):
         self.setFormat(0, len(line) - 1, _DEFAULT_TEXT_COLOR)
-        if _is_instruction(line):
+        if is_instruction(line):
             start = 0
             end = line.find(" ", start)
             instruction_length = end - start
 
             self.setFormat(start, instruction_length, _INSTRUCTION_COLOR)
 
-        if _is_generic_directive(line.strip()):
+        if is_generic_directive(line.strip()):
             start = line.find(".")
             end = line.find(" ", start)
             directive_length = end - start
