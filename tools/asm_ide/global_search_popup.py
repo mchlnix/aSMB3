@@ -140,6 +140,12 @@ class GlobalSearchPopup(QWidget):
         else:
             self.close()
 
+    def close(self):
+        # needed, because the code area doesn't get the focus otherwise for some reason
+        self.parent().setFocus()
+
+        super().close()
+
 
 class SearchResultsTable(TableWidget):
     def set_search_results(self, search_results: list[SearchResult]):

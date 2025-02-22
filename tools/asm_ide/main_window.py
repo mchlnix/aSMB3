@@ -137,15 +137,14 @@ class MainWindow(QMainWindow):
 
         data_by_file = self._get_asm_with_local_copies()
 
-        self._global_search_widget = GlobalSearchPopup(self._tab_widget, search_term, data_by_file)
+        self._global_search_widget = GlobalSearchPopup(current_code_area, search_term, data_by_file)
         self._global_search_widget.search_result_clicked.connect(self.follow_redirect)
 
         self._global_search_widget.setMaximumSize(
             current_code_area.size() - QSize(40 + current_code_area.viewportMargins().left(), 40)
         )
 
-        pos_in_self = current_code_area.mapTo(self._tab_widget, current_code_area.pos())
-        pos_in_self += QPoint(current_code_area.viewportMargins().left(), 0)
+        pos_in_self = QPoint(current_code_area.viewportMargins().left(), 0)
         pos_in_self += QPoint(20, 20)
 
         self._global_search_widget.move(pos_in_self)
