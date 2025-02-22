@@ -133,9 +133,11 @@ class MainWindow(QMainWindow):
         if current_code_area is None:
             return
 
+        search_term = current_code_area.textCursor().selectedText()
+
         data_by_file = self._get_asm_with_local_copies()
 
-        self._global_search_widget = GlobalSearchPopup(self._tab_widget, "", data_by_file)
+        self._global_search_widget = GlobalSearchPopup(self._tab_widget, search_term, data_by_file)
         self._global_search_widget.search_result_clicked.connect(self.follow_redirect)
 
         self._global_search_widget.setMaximumSize(
