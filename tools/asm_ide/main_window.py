@@ -198,7 +198,6 @@ class MainWindow(QMainWindow):
 
         if self._tab_widget:
             self._tab_widget.clear()
-            self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
 
         # todo only parse the PRG files mentioned in smb3.asm
         return True
