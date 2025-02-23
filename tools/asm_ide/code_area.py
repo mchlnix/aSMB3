@@ -6,7 +6,6 @@ from PySide6.QtGui import (
     QColor,
     QFont,
     QMouseEvent,
-    QPaintEvent,
     QResizeEvent,
     QTextBlock,
     QTextCharFormat,
@@ -50,6 +49,7 @@ class CodeArea(QPlainTextEdit):
 
     blockCountChanged: SignalInstance
     cursorPositionChanged: SignalInstance
+    updateRequest: SignalInstance
 
     def __init__(self, parent, reference_finder: ReferenceFinder):
         super(CodeArea, self).__init__(parent)
@@ -72,8 +72,8 @@ class CodeArea(QPlainTextEdit):
         self.syntax_highlighter.setDocument(self.text_document)
 
         # line number area
-        # todo: maybe use updateRequest signal to update line_number_area, when text box needs change
         self._line_number_area = LineNumberArea(self)
+        self.updateRequest.connect(self._line_number_area.react_to_editor)
         self.blockCountChanged.connect(self._line_number_area.update_text_measurements)
 
         # word under cursor
@@ -211,10 +211,6 @@ class CodeArea(QPlainTextEdit):
 
         return current_line_selection
 
-    def paintEvent(self, e: QPaintEvent):
-        self._line_number_area.repaint()
-        return super().paintEvent(e)
-
     def mouseMoveEvent(self, e):
         text_cursor = self.cursorForPosition(e.pos())
 
@@ -278,7 +274,6 @@ class CodeArea(QPlainTextEdit):
         navigated_by_mouse = event.buttons() & (Qt.MouseButton.BackButton | Qt.MouseButton.ForwardButton)
 
         if cursor_pos_changed and not navigated_by_mouse:
-            # todo: could be done with signal of QPlainTextEdit
             self.text_position_clicked.emit(text_cursor_at_click.position())
 
         return super().mousePressEvent(event)

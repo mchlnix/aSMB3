@@ -48,10 +48,14 @@ class LineNumberArea(QWidget):
         size = QSize(self.MARGIN_LEFT + self._line_no_width + self.MARGIN_RIGHT, self.editor.maximumSize().height())
         return size
 
-    def paintEvent(self, event: QPaintEvent):
-        self.paint_area(event)
+    def react_to_editor(self, _, scrolled_by: int):
+        if scrolled_by != 0:
+            self.repaint()
 
-    def paint_area(self, _event: QPaintEvent):
+    def paintEvent(self, event: QPaintEvent):
+        self.paint_area()
+
+    def paint_area(self):
         painter = QPainter(self)
         painter.setFont(self.editor.document().defaultFont())
         painter.setPen(_LINE_NO_COLOR)
