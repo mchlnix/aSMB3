@@ -1,3 +1,4 @@
+from enum import IntEnum, auto
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QPoint, Qt, Signal
@@ -5,6 +6,12 @@ from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLineEdit, QWidget
 
 if TYPE_CHECKING:
     from tools.asm_ide.code_area import CodeArea
+
+
+class SearchDirection(IntEnum):
+    BACKWARDS = auto()
+    FORWARDS = auto()
+    NEXT = auto()
 
 
 class SearchBar(QWidget):
@@ -62,13 +69,12 @@ class SearchBar(QWidget):
         self._search_input.setFocus()
 
     def keyPressEvent(self, event):
-        # pressing the Enter key for some reason also gets sent to the CodeArea, so accept the event to prevent this
         if event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
+
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-                # todo use constants
-                self.next_match.emit(-1)
+                self.next_match.emit(SearchDirection.BACKWARDS)
             else:
-                self.next_match.emit(1)
+                self.next_match.emit(SearchDirection.NEXT)
 
         elif event.key() == Qt.Key.Key_Escape:
             self._editor.setFocus()

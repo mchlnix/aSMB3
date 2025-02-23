@@ -28,7 +28,7 @@ from tools.asm_ide.reference_finder import (
     ReferenceDefinition,
     ReferenceFinder,
 )
-from tools.asm_ide.search_bar import SearchBar
+from tools.asm_ide.search_bar import SearchBar, SearchDirection
 from tools.asm_ide.util import ctrl_is_pressed
 
 _MAX_TOOLTIP_RESULTS = 30
@@ -122,25 +122,27 @@ class CodeArea(QPlainTextEdit):
     def focus_search_bar(self):
         self._search_bar.setFocus()
 
-    def _search(self, direction=0):
-        # todo use constants from SearchBar
+    def _search(self, direction: SearchDirection = SearchDirection.FORWARDS):
         """
         Searches for the next instance of the search term in the search bar, if there is one.
 
-        :param direction: Number between -1 and 1.
-        `-1` means, search backwards.
-        `0` means, stay with a word, as long as it continues to match, i.e. while typing (default).
-        `1` means force to go to the next match if it exists (default behaviour of the QTextDocument.find function).
+        SearchDirection.BACKWARDS means, go to the previous match, if one exists.
+
+        SearchDirection.FORWARDS means stay with a word, as long as it continues to match,
+        i.e. while typing (default of this function).
+
+        SearchDirection.NEXT means force to go to the next match if it exists
+        (default behaviour of the QTextDocument.find function).
         """
         current_cursor = self.textCursor()
 
         # there is no neutral or default find flag, so we have to make our own
         find_flags = QTextDocument.FindFlag.FindBackward & QTextDocument.FindFlag.FindWholeWords
 
-        if direction == -1:
+        if direction == SearchDirection.BACKWARDS:
             find_flags |= QTextDocument.FindFlag.FindBackward
 
-        if current_cursor.hasSelection() and direction == 0:
+        if current_cursor.hasSelection() and direction == SearchDirection.FORWARDS:
             # QTextDocument.find() returns a text cursor, that already selects the search term.
             # When typing in a search term, with every new character, it would take the end of old match's the selection
             # and continue searching from there.

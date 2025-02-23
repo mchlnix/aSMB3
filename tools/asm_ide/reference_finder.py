@@ -1,7 +1,7 @@
 import time
 from collections import defaultdict
 from contextlib import suppress
-from enum import Enum
+from enum import IntEnum, auto
 from pathlib import Path
 from typing import NamedTuple
 
@@ -10,11 +10,11 @@ from PySide6.QtCore import QObject, QRegularExpression, QRunnable, Signal
 from tools.asm_ide.util import strip_comment
 
 
-class ReferenceType(Enum):
-    CONSTANT = 0
-    LABEL = 1
-    RAM_VAR = 2
-    UNSET = 99
+class ReferenceType(IntEnum):
+    CONSTANT = auto()
+    LABEL = auto()
+    RAM_VAR = auto()
+    UNSET = auto()
 
 
 class ReferenceDefinition(NamedTuple):
