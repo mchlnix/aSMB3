@@ -137,7 +137,7 @@ class ReferenceFinder(QRunnable):
         self._definitions.clear()
         self._name_to_references.clear()
 
-        for file_path, data in self._path_to_data.items():
+        for file_path in self._path_to_data:
             self.signals.progress_made.emit(progress, f"Parsing for Definitions: {file_path}")
             self._parse_file_for_definitions(file_path)
             progress += 1
@@ -180,7 +180,7 @@ class ReferenceFinder(QRunnable):
                 return
 
     def _parse_all_files_for_references(self, added_definitions, do_a_complete_parse, progress):
-        for file_path, data in self._path_to_data.items():
+        for file_path in self._path_to_data:
             self.signals.progress_made.emit(progress, f"Parsing for References: {file_path}")
 
             self._parse_file_for_references(file_path, added_definitions, do_a_complete_parse)

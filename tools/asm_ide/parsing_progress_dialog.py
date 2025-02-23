@@ -11,7 +11,7 @@ class ParsingProgressDialog(QProgressDialog):
         self._parse_callback = parse_callback
 
         self.setWindowTitle("Parsing Progress")
-        self.setLabelText(f"Preparing to parse'")
+        self.setLabelText("Preparing to parse")
 
         self.setWindowModality(Qt.ApplicationModal)
 
