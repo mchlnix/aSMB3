@@ -75,17 +75,20 @@ jobs:
         git config user.name "Automated Release"
         git config user.email "automated@release.com"
 
+    - name: Set last tag name variable
+      run: echo "LAST_TAG=$(git describe --tags --exclude=nightly --abbrev=0)" >> $GITHUB_ENV
+
     - name: Remove old nightly tag
       run: git tag --delete nightly || true
 
     - name: Set new nightly tag
-      run: 'git tag --annotate nightly -m "+$(git rev-list --count origin/master..HEAD) commits
+      run: 'git tag --annotate nightly -m "+$(git rev-list --count $LAST_TAG..HEAD) commits
 
 
-      CAUTION: Nightlies are untested alpha releases. Most users should use ''$(git describe --tags --exclude=nightly --abbrev=0)''!
+      CAUTION: Nightlies are untested alpha releases. Most users should use ''$LAST_TAG''!
 
 
-      $(git log --format=''%an: %s (%h)'' --reverse origin/master..HEAD | grep -v ''Merge pull request'')"'
+      $(git log --format=''%an: %s (%h)'' --reverse $LAST_TAG..HEAD | grep -v ''Merge pull request'')"'
 
     - name: Show created tag
       run: |
@@ -98,7 +101,7 @@ jobs:
       run: git push --tags
 
   build_editor:
-    needs: code_style
+    needs: [code_style, static_analysis]
     if: startsWith(github.ref, 'refs/tags/')
 
     name: Build ${{ matrix.editor.name }}-${{ matrix.cfg.prefix }}
