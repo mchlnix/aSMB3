@@ -46,7 +46,7 @@ class ReferenceFinder(QRunnable):
     def __init__(self):
         super().__init__()
 
-        self._path_to_data: dict[Path | str] = {}
+        self._path_to_data: dict[Path, str] = {}
         """
         Holds a Path and the data that Path points to. Could be the file data on disk or the (perhaps) modified data of
         the opened file in the editor.

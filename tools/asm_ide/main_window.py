@@ -8,7 +8,7 @@ from PySide6.QtGui import (
     QShortcut,
     Qt,
 )
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QToolBar
+from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QToolBar
 
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
 from tools.asm_ide.global_search_popup import GlobalSearchPopup
@@ -217,9 +217,15 @@ class MainWindow(QMainWindow):
     def _get_disassembly_root(self) -> Path | None:
         dis_asm_folder = QFileDialog.getExistingDirectory(self, "Select Disassembly Directory")
 
+        if not dis_asm_folder:
+            return None
+
         dis_asm_root_path = Path(dis_asm_folder)
 
-        if not dis_asm_root_path.is_dir() or not (dis_asm_root_path / "smb3.asm").exists():
+        if not (dis_asm_root_path / "smb3.asm").exists():
+            QMessageBox.critical(
+                None, "Invalid Disassembly Directory", "The directory you selected did not contain an 'smb3.asm' file."
+            )
             return None
 
         return dis_asm_root_path
