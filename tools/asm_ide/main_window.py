@@ -30,7 +30,9 @@ class MainWindow(QMainWindow):
 
         self._global_search_widget: GlobalSearchPopup | None = None
 
-        self._tab_widget = TabWidget(self)
+        self._reference_finder = ReferenceFinder()
+
+        self._tab_widget = TabWidget(self, self._reference_finder)
         self._tab_widget.contents_changed.connect(self._update_search_index)
         self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
@@ -38,12 +40,6 @@ class MainWindow(QMainWindow):
             quit()
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
-
-        self._reference_finder = ReferenceFinder(self._root_path)
-
-        ParsingProgressDialog(self._reference_finder)
-
-        self._tab_widget.reference_finder = self._reference_finder
 
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp), self, self._tab_widget.to_previous_tab)
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown), self, self._tab_widget.to_next_tab)
@@ -158,17 +154,20 @@ class MainWindow(QMainWindow):
         self._global_search_widget.show()
 
     def _update_search_index(self, path_of_changed_file: Path):
-        if self._tab_widget.reference_finder is None:
-            return
+        parse_call = self._get_populated_parse_call(path_of_changed_file)
 
+        self._search_index_threads.start(parse_call)
+
+    def _get_populated_parse_call(self, path_of_changed_file: Path | None):
         local_copies = self._get_asm_with_local_copies()
 
-        # todo: update this method, since local copies just has data for all files now
-        self._search_index_threads.start(
-            self._tab_widget.reference_finder.run_with_local_copies(local_copies, path_of_changed_file)
-        )
+        if path_of_changed_file is not None:
+            path_of_changed_file = path_of_changed_file.relative_to(self._root_path)
+
+        return self._tab_widget.reference_finder.run_with_local_copies(local_copies, path_of_changed_file)
 
     def _get_asm_with_local_copies(self):
+        # todo only parse the PRG files mentioned in smb3.asm?
         asm: dict[Path, str] = dict()
 
         for asm_path in [self._root_path / "smb3.asm"] + self.prg_files:
@@ -198,18 +197,22 @@ class MainWindow(QMainWindow):
 
         self._root_path = path
 
-        # todo: make the loading make sense chronologically
-        if self._tab_widget:
-            self._tab_widget.clear()
+        self._tab_widget.clear()
 
-            if self._tab_widget.reference_finder:
-                self._tab_widget.reference_finder.root_path = self._root_path
-                ParsingProgressDialog(self._tab_widget.reference_finder)
+        self._parse_with_progress_dialog()
 
-                self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
+        self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
 
-        # todo only parse the PRG files mentioned in smb3.asm
         return True
+
+    def _parse_with_progress_dialog(self):
+        parse_call = self._get_populated_parse_call(None)
+        progress_dialog = ParsingProgressDialog(parse_call)
+
+        self._reference_finder.signals.maximum_found.connect(progress_dialog.setMaximum)
+        self._reference_finder.signals.progress_made.connect(progress_dialog.update_text)
+
+        progress_dialog.start()
 
     def _get_disassembly_root(self) -> Path | None:
         dis_asm_folder = QFileDialog.getExistingDirectory(self, "Select Disassembly Directory")

@@ -36,12 +36,12 @@ class TabWidget(QTabWidget):
     tabCloseRequested: SignalInstance
     currentChanged: SignalInstance
 
-    def __init__(self, parent):
+    def __init__(self, parent, reference_finder: ReferenceFinder):
         super(TabWidget, self).__init__(parent)
         self.setMouseTracking(True)
 
         self.tab_index_to_path: list[Path] = []
-        self.reference_finder: ReferenceFinder | None = None
+        self.reference_finder: ReferenceFinder = reference_finder
 
         tab_bar = TabBar(self)
         tab_bar.middle_click_on.connect(self.tabCloseRequested.emit)
@@ -65,9 +65,6 @@ class TabWidget(QTabWidget):
             self._load_asm_file(abs_path)
 
     def _load_asm_file(self, abs_path: Path) -> None:
-        if self.reference_finder is None:
-            raise ValueError("Error, ReferenceFinder not set")
-
         code_area = CodeArea(self, self.reference_finder)
         code_area.redirect_clicked.connect(self.redirect_clicked.emit)
         code_area.contents_changed.connect(lambda: self.contents_changed.emit(abs_path))
@@ -269,6 +266,7 @@ class TabWidget(QTabWidget):
 
     def clear(self):
         self.tab_index_to_path.clear()
+        self.reference_finder.clear()
 
         return super().clear()
 

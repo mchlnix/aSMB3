@@ -43,12 +43,16 @@ class ParserSignals(QObject):
 
 
 class ReferenceFinder(QRunnable):
-    def __init__(self, root_path: Path):
+    def __init__(self):
         super().__init__()
 
-        self.root_path = root_path
+        self._path_to_data: dict[Path | str] = {}
+        """
+        Holds a Path and the data that Path points to. Could be the file data on disk or the (perhaps) modified data of
+        the opened file in the editor.
+        This allows finding definitions and references, that are not yet saved to disk.
+        """
 
-        self._local_copies: dict[Path, str] = {}
         self._currently_open_file: Path | None = None
         """
         When documents are modified, but not saved yet, we have to use the local copies, instead of the files on disk.
@@ -64,19 +68,16 @@ class ReferenceFinder(QRunnable):
 
         self.setAutoDelete(False)
 
-    @property
-    def prg_files(self):
-        prg_dir = self.root_path / "PRG"
+    def clear(self):
+        self.definitions.clear()
+        self.name_to_references.clear()
 
-        return sorted(prg_dir.glob("prg[0-9]*.asm"))
+        self._path_to_data.clear()
+        self._currently_open_file = None
 
-    @property
-    def prg_count(self):
-        return len(self.prg_files)
-
-    def run_with_local_copies(self, local_copies: dict[Path, str], open_file: Path | None = None):
-        self._local_copies = local_copies
-        self._currently_open_file = open_file
+    def run_with_local_copies(self, files: dict[Path, str], currently_open_file: Path | None = None):
+        self._path_to_data = files
+        self._currently_open_file = currently_open_file
 
         return self.run
 
@@ -87,24 +88,18 @@ class ReferenceFinder(QRunnable):
 
         # smb3.asm twice, all the prg files twice and then cleaning up the references once
         # this is only for a progress dialog, where we always do a complete parse
-        self.signals.maximum_found.emit(2 + self.prg_count * 2 + 1)
+        self.signals.maximum_found.emit(len(self._path_to_data) * 2 + 1)
 
         # Pass 1, get all the definitions
-        smb3_path = self.root_path / "smb3.asm"
-
         if do_a_complete_parse:
             added_definitions = []
-            progress = self._parse_all_files_for_definitions(smb3_path)
+            progress = self._parse_all_files_for_definitions()
         else:
             added_definitions = self._parse_current_file_for_definitions()
             progress = 0
 
         # Pass 2, find all the references
-        for asm_file in [smb3_path] + self.prg_files:
-            self.signals.progress_made.emit(progress, f"Parsing: {asm_file}")
-
-            self._parse_file_for_references(asm_file, added_definitions, do_a_complete_parse)
-            progress += 1
+        progress = self._parse_all_files_for_references(added_definitions, do_a_complete_parse, progress)
 
         self.signals.progress_made.emit(progress, "Cleaning up References")
         self._cleanup_references()
@@ -113,7 +108,7 @@ class ReferenceFinder(QRunnable):
         self.definitions = self._definitions.copy()
         self.name_to_references = self._name_to_references.copy()
 
-        self._local_copies.clear()
+        self._path_to_data.clear()
 
         print(f"Parsing took {round(time.time() - start_time, 2)} seconds")
 
@@ -136,37 +131,29 @@ class ReferenceFinder(QRunnable):
 
         return added_definitions
 
-    def _parse_all_files_for_definitions(self, smb3_path):
+    def _parse_all_files_for_definitions(self):
         progress = 0
 
         self._definitions.clear()
         self._name_to_references.clear()
 
-        for asm_file in [smb3_path] + self.prg_files:
-            self.signals.progress_made.emit(progress, f"Parsing: {asm_file}")
-            self._parse_file_for_definitions(asm_file)
+        for file_path, data in self._path_to_data.items():
+            self.signals.progress_made.emit(progress, f"Parsing for Definitions: {file_path}")
+            self._parse_file_for_definitions(file_path)
             progress += 1
 
         return progress
 
-    def _remove_all_definitions_of_file(self, abs_file_path: Path):
-        rel_path = abs_file_path.relative_to(self.root_path)
-
+    def _remove_all_definitions_of_file(self, rel_file_path: Path):
         for name, value in list(self._definitions.items()):
-            if value.origin_file == rel_path:
+            if value.origin_file == rel_file_path:
                 self._definitions.pop(name)
 
     def _parse_file_for_definitions(self, file_path: Path):
-        if file_path not in self._local_copies:
-            with file_path.open("r") as f:
-                lines = f.readlines()
-        else:
-            lines = self._local_copies[file_path].splitlines(True)
-
-        rel_path = file_path.relative_to(self.root_path)
+        lines = self._path_to_data[file_path].splitlines(True)
 
         for line_no, line in enumerate(lines, 1):
-            self._find_definitions_in_line(line, line_no, rel_path)
+            self._find_definitions_in_line(line, line_no, file_path)
 
     def _find_definitions_in_line(self, line, line_no, rel_path):
         clean_line = strip_comment(line)
@@ -192,26 +179,29 @@ class ReferenceFinder(QRunnable):
             if we_matched:
                 return
 
-    def _parse_file_for_references(self, abs_file_to_parse: Path, added_definitions: list[str], force_parse):
-        if abs_file_to_parse not in self._local_copies:
-            data = abs_file_to_parse.read_text()
-        else:
-            data = self._local_copies[abs_file_to_parse]
+    def _parse_all_files_for_references(self, added_definitions, do_a_complete_parse, progress):
+        for file_path, data in self._path_to_data.items():
+            self.signals.progress_made.emit(progress, f"Parsing for References: {file_path}")
 
-        is_open_file = abs_file_to_parse == self._currently_open_file
+            self._parse_file_for_references(file_path, added_definitions, do_a_complete_parse)
+            progress += 1
+        return progress
+
+    def _parse_file_for_references(self, file_to_parse: Path, added_definitions: list[str], force_parse):
+        data = self._path_to_data[file_to_parse]
+
+        is_open_file = file_to_parse == self._currently_open_file
 
         if not (force_parse or is_open_file) and not any(value in data for value in added_definitions):
             return
 
         lines = data.splitlines(True)
 
-        rel_file_to_parse = abs_file_to_parse.relative_to(self.root_path)
-
-        print(f"Parsing {rel_file_to_parse}")
-        self._remove_reference_of_file(force_parse, is_open_file, rel_file_to_parse)
+        print(f"Parsing {file_to_parse}")
+        self._remove_reference_of_file(force_parse, is_open_file, file_to_parse)
 
         for line_no, line in enumerate(lines, 1):
-            self._find_references_in_line(line, line_no, rel_file_to_parse)
+            self._find_references_in_line(line, line_no, file_to_parse)
 
     def _find_references_in_line(self, line, line_no, rel_path):
         clean_line = strip_comment(line)
