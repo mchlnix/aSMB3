@@ -1,7 +1,11 @@
 from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat
 
-from tools.asm_ide.reference_finder import ReferenceFinder, ReferenceType
+from tools.asm_ide.reference_finder import (
+    ReferenceDefinition,
+    ReferenceFinder,
+    ReferenceType,
+)
 from tools.asm_ide.util import is_generic_directive, is_instruction
 
 _DEC_NUMBER_REGEX = QRegularExpression("([0-9]+)")
@@ -73,10 +77,7 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
 
         self._reference_finder = reference_finder
 
-        # todo: with ReferenceType, this should be reducible to one member
-        self.const_under_cursor = ""
-        self.ram_variable_under_cursor = ""
-        self.label_under_cursor = ""
+        self.definition_under_cursor: ReferenceDefinition | None = None
 
     def highlightBlock(self, line: str, clickable=False):
         self.setFormat(0, len(line) - 1, _DEFAULT_TEXT_COLOR)
@@ -106,14 +107,13 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
                     if expression != _CONST_LABEL_CALL_RAM_VAR_REGEX:
                         self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
 
-                    if match.capturedView(captured_index) in [
-                        self.const_under_cursor,
-                        self.ram_variable_under_cursor,
-                        self.label_under_cursor,
-                    ]:
-                        if match.capturedView(captured_index) == self.const_under_cursor:
+                    if (
+                        self.definition_under_cursor
+                        and match.capturedView(captured_index) == self.definition_under_cursor.name
+                    ):
+                        if self.definition_under_cursor.type == ReferenceType.CONSTANT:
                             text_format = _CLICKABLE_CONST_COLOR
-                        elif match.capturedView(captured_index) == self.ram_variable_under_cursor:
+                        elif self.definition_under_cursor.type == ReferenceType.RAM_VAR:
                             text_format = _CLICKABLE_RAM_VAR_COLOR
                         else:
                             text_format = _CLICKABLE_LABEL_COLOR

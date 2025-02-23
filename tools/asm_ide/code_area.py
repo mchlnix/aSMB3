@@ -24,7 +24,10 @@ from PySide6.QtWidgets import (
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
 from tools.asm_ide.redirect_popup import RedirectPopup
-from tools.asm_ide.reference_finder import ReferenceDefinition, ReferenceFinder, ReferenceType
+from tools.asm_ide.reference_finder import (
+    ReferenceDefinition,
+    ReferenceFinder,
+)
 from tools.asm_ide.search_bar import SearchBar
 from tools.asm_ide.util import ctrl_is_pressed
 
@@ -225,9 +228,7 @@ class CodeArea(QPlainTextEdit):
 
         # reset potentially old const highlighting
         self.last_word = ""
-        self.syntax_highlighter.const_under_cursor = ""
-        self.syntax_highlighter.ram_variable_under_cursor = ""
-        self.syntax_highlighter.label_under_cursor = ""
+        self.syntax_highlighter.definition_under_cursor = None
 
         if self.last_block is not None:
             self.syntax_highlighter.rehighlightBlock(self.last_block)
@@ -246,14 +247,10 @@ class CodeArea(QPlainTextEdit):
         tooltip = QToolTip()
         tooltip.setFont(QFont("Monospace", 14))
 
-        name, value, file, line_no, nv_type, line = self._reference_finder.definitions[word]
+        definition = self._reference_finder.definitions[word]
+        self.syntax_highlighter.definition_under_cursor = definition
 
-        if nv_type == ReferenceType.CONSTANT:
-            self.syntax_highlighter.const_under_cursor = word
-        elif nv_type == ReferenceType.RAM_VAR:
-            self.syntax_highlighter.ram_variable_under_cursor = word
-        else:
-            self.syntax_highlighter.label_under_cursor = word
+        name, value, file, line_no, nv_type, line = definition
 
         tooltip_text = f"{file}+{line_no}: {name} = {value}"
 

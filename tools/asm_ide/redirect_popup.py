@@ -1,10 +1,11 @@
+from pathlib import Path
+
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QTableWidgetItem,
     QWidget,
 )
-from pathlib import Path
 
 from tools.asm_ide.reference_finder import ReferenceDefinition, ReferenceType
 from tools.asm_ide.table_widget import TableWidget
