@@ -1,5 +1,6 @@
 import sys
 import traceback
+from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -10,11 +11,16 @@ if __name__ == "__main__":
     app = None
 
     try:
-        app = QApplication(sys.argv)
+        app = QApplication()
 
         init_settings()
 
-        main_window = MainWindow()
+        if len(sys.argv) > 1:
+            path_arg: Path | None = Path(sys.argv[1])
+        else:
+            path_arg = None
+
+        main_window = MainWindow(path_arg)
         main_window.show()
 
         app.exec()

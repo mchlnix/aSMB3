@@ -21,7 +21,7 @@ from tools.asm_ide.tab_widget import TabWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, root_path: Path | None = None):
         super().__init__()
 
         self.setWindowTitle("ASMB3 IDE")
@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         self._tab_widget.contents_changed.connect(self._update_search_index)
         self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
-        if not self._on_open():
+        if not self._on_open(path=root_path):
             quit()
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
@@ -205,13 +205,14 @@ class MainWindow(QMainWindow):
 
         return asm
 
-    def _on_open(self):
+    def _on_open(self, *, path: Path | None = None):
         if self._tab_widget and not self._tab_widget.ask_to_quit_all_tabs_without_saving():
             return False
 
-        path = self._get_disassembly_root()
-
         if path is None:
+            path = self._get_disassembly_root()
+
+        if path is None or not self._root_path_is_valid(path):
             return False
 
         self._root_path = path
@@ -221,6 +222,16 @@ class MainWindow(QMainWindow):
         self._parse_with_progress_dialog()
 
         self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
+
+        return True
+
+    @staticmethod
+    def _root_path_is_valid(root_path: Path):
+        if not (root_path / "smb3.asm").exists():
+            QMessageBox.critical(
+                None, "Invalid Disassembly Directory", "The directory you selected did not contain an 'smb3.asm' file."
+            )
+            return False
 
         return True
 
@@ -239,15 +250,7 @@ class MainWindow(QMainWindow):
         if not dis_asm_folder:
             return None
 
-        dis_asm_root_path = Path(dis_asm_folder)
-
-        if not (dis_asm_root_path / "smb3.asm").exists():
-            QMessageBox.critical(
-                None, "Invalid Disassembly Directory", "The directory you selected did not contain an 'smb3.asm' file."
-            )
-            return None
-
-        return dis_asm_root_path
+        return Path(dis_asm_folder)
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.buttons() & Qt.MouseButton.ForwardButton:
