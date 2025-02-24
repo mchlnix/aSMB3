@@ -154,6 +154,8 @@ class SearchResultsTable(TableWidget):
         super(SearchResultsTable, self).__init__(parent)
 
         self.setFont(QFont("Monospace", Settings().value(SettingKeys.EDITOR_SEARCH_FONT_SIZE)))
+        self._bold_font = self.font()
+        self._bold_font.setBold(True)
 
     def set_search_results(self, search_results: list[SearchResult]):
         self.clear()

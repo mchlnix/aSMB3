@@ -111,6 +111,8 @@ class CodeArea(QPlainTextEdit):
         self._font.setBold(settings.value(SettingKeys.EDITOR_CODE_FONT_BOLD))
         self.text_document.setDefaultFont(self._font)
 
+        self._line_number_area.update_text_measurements()
+
         self._text_change_delay_timer.setInterval(settings.value(SettingKeys.APP_REPARSE_DELAY_MS))
 
     def _maybe_trigger_timer(self, _: int, chars_added: int, chars_removed: int) -> None:
@@ -259,14 +261,15 @@ class CodeArea(QPlainTextEdit):
         name, value, file, line_no, ref_type, line = definition
 
         tooltip_text = f"{file}+{line_no}: {name} = {value}"
+        tooltip_max_results = settings.value(SettingKeys.EDITOR_TOOLTIP_MAX_RESULTS)
 
-        if self._reference_finder.name_to_references.get(name, False):
+        if self._reference_finder.name_to_references.get(name, False) and tooltip_max_results != 0:
             tooltip_text += "\n\nReferenced at:"
 
             for index, reference in enumerate(sorted(self._reference_finder.name_to_references[name]), 1):
                 tooltip_text += f"\n{reference.origin_file}+{reference.origin_line_no}: {reference.line}"
 
-                if index == settings.value(SettingKeys.EDITOR_TOOLTIP_MAX_RESULTS):
+                if index == tooltip_max_results:
                     tooltip_text += "\n  ..."
                     break
 

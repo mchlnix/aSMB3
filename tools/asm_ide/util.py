@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
 root_dir = Path(__file__).parent.parent.parent
 
@@ -11,6 +11,27 @@ data_dir = root_dir.joinpath("data")
 icon_dir = data_dir.joinpath("icons")
 
 TOOLBAR_ICON_SIZE = QSize(20, 20)
+
+
+def label_and_widget(label_text: str, widget: QWidget, *widgets: QWidget, add_stretch=True, tooltip="") -> QHBoxLayout:
+    label = QLabel(label_text)
+
+    if tooltip:
+        label.setToolTip(tooltip)
+
+    layout = QHBoxLayout()
+
+    layout.addWidget(label)
+
+    if add_stretch:
+        layout.addStretch(1)
+
+    layout.addWidget(widget)
+
+    for additional_widget in widgets:
+        layout.addWidget(additional_widget)
+
+    return layout
 
 
 def ctrl_is_pressed():

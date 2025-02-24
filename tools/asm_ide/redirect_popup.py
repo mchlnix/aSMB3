@@ -58,6 +58,8 @@ class ReferenceTableWidget(TableWidget):
         super(ReferenceTableWidget, self).__init__(parent)
 
         self.setFont(QFont("Monospace", Settings().value(SettingKeys.EDITOR_REFERENCE_FONT_SIZE)))
+        self._bold_font = self.font()
+        self._bold_font.setBold(True)
 
     def set_references(self, definition: ReferenceDefinition, references: list[ReferenceDefinition]):
         # set row count

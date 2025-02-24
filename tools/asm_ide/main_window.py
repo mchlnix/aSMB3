@@ -16,6 +16,7 @@ from tools.asm_ide.menu_toolbar import MenuToolbar
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.reference_finder import ReferenceFinder
 from tools.asm_ide.settings import SettingKeys, Settings
+from tools.asm_ide.settings_dialog import SettingsDialog
 from tools.asm_ide.tab_widget import TabWidget
 
 
@@ -101,8 +102,20 @@ class MainWindow(QMainWindow):
 
         self.file_menu.addSeparator()
 
+        settings_action = self.file_menu.addAction("Settings")
+        settings_action.triggered.connect(self._on_settings)
+
+        self.file_menu.addSeparator()
+
         exit_action = self.file_menu.addAction("Exit")
         exit_action.triggered.connect(self.close)
+
+    def _on_settings(self):
+        settings_dialog = SettingsDialog(self)
+
+        settings_dialog.exec()
+
+        self._tab_widget.update_from_settings()
 
     def follow_redirect(self, relative_file_path: Path, line_no: int):
         current_code_area = self._tab_widget.currentWidget()

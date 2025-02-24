@@ -51,6 +51,10 @@ class TabWidget(QTabWidget):
         self.tabCloseRequested.connect(self._close_tab)
         self.currentChanged.connect(self._on_current_tab_changed)
 
+    def update_from_settings(self):
+        for widget in self.widgets():
+            widget.update_from_settings()
+
     @property
     def current_code_area(self) -> CodeArea | None:
         return self.currentWidget()
