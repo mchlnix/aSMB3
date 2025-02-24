@@ -1,4 +1,9 @@
+import shlex
+import shutil
+import subprocess
 from pathlib import Path
+from subprocess import CalledProcessError
+from tempfile import TemporaryDirectory
 
 from PySide6.QtCore import QPoint, QSize, QThreadPool
 from PySide6.QtGui import (
@@ -87,6 +92,8 @@ class MainWindow(QMainWindow):
 
         toolbar.position_change_requested.connect(self._move_to_position)
 
+        toolbar.assemble_rom_action.triggered.connect(self._assemble_rom)
+
         QShortcut(QKeySequence(Qt.Modifier.ALT | Qt.Key.Key_Right), self, toolbar.go_forward_action.trigger)
         QShortcut(QKeySequence(Qt.Modifier.ALT | Qt.Key.Key_Left), self, toolbar.go_back_action.trigger)
 
@@ -116,6 +123,54 @@ class MainWindow(QMainWindow):
         settings_dialog.exec()
 
         self._tab_widget.update_from_settings()
+
+    def _assemble_rom(self):
+        old_cursor = self.cursor()
+        self.setCursor(Qt.CursorShape.BusyCursor)
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            # copy all necessary files into the temp directory
+            self._mirror_root_dir_to_temp_dir(temp_path)
+
+            # copy currently open files
+            self._write_modified_source_into_temp_dir(temp_path)
+
+            # call the compiler and capture it's output
+            command = shlex.split(Settings().value(SettingKeys.ASSEMBLY_COMMAND))
+
+            try:
+                subprocess.run(command, cwd=temp_path, check=True, capture_output=True)
+            except CalledProcessError as cpe:
+                QMessageBox.critical(
+                    self, "Assembling the code failed", f"{cpe.stderr.decode()}\n{cpe.stdout.decode()}"
+                )
+            except Exception as ex:
+                QMessageBox.critical(self, "Assembling the code failed", str(ex))
+            else:
+                # copy back the compiled ROM
+                shutil.copy((temp_path / "smb3.nes"), self._root_path / "smb3.nes")
+
+                if Settings().value(SettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
+                    QMessageBox.information(self, "Assembling finished", "Assembly was successful")
+
+        self.setCursor(old_cursor)
+
+    def _mirror_root_dir_to_temp_dir(self, temp_path):
+        for abs_path in self._root_path.iterdir():
+            rel_path = abs_path.relative_to(self._root_path)
+            if abs_path.is_file():
+                shutil.copy(self._root_path / rel_path, temp_path / rel_path)
+
+            elif abs_path.is_dir():
+                shutil.copytree(self._root_path / rel_path, temp_path / rel_path)
+
+    def _write_modified_source_into_temp_dir(self, temp_path):
+        local_copies = self._get_asm_with_local_copies()
+
+        for rel_file_path, text in local_copies.items():
+            (temp_path / rel_file_path).write_text(text)
 
     def follow_redirect(self, relative_file_path: Path, line_no: int):
         current_code_area = self._tab_widget.currentWidget()
@@ -186,6 +241,11 @@ class MainWindow(QMainWindow):
         return self._tab_widget.reference_finder.run_with_local_copies(local_copies, path_of_changed_file)
 
     def _get_asm_with_local_copies(self):
+        """
+        Returns a dictionary whose keys are relative Paths to the PRG and smb3.asm file and the values are the current
+        contents of these files.
+        Either from disk, or from the open code area.
+        """
         # todo only parse the PRG files mentioned in smb3.asm?
         asm: dict[Path, str] = dict()
 

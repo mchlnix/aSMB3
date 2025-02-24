@@ -14,6 +14,9 @@ class SettingKeys(StrEnum):
     APP_SAVE_AUTOMATICALLY = "app_save_automatically"  # currently unused
     APP_START_MAXIMIZED = "app_start_maximized"
 
+    ASSEMBLY_COMMAND = "assembly_command"
+    ASSEMBLY_NOTIFY_SUCCESS = "assembly_notify_success"
+
     EDITOR_CODE_FONT_BOLD = "editor_code_font_bold"
     EDITOR_CODE_FONT_SIZE = "editor_code_font_size"
     EDITOR_REFERENCE_FONT_SIZE = "editor_reference_font_size"
@@ -27,6 +30,9 @@ _DEFAULT_VALUES: dict[SettingKeys, str | int | bool] = {
     SettingKeys.APP_REMEMBER_OPEN_FILES: False,
     SettingKeys.APP_SAVE_AUTOMATICALLY: False,
     SettingKeys.APP_START_MAXIMIZED: False,
+    #
+    SettingKeys.ASSEMBLY_COMMAND: "nesasm.exe %f",
+    SettingKeys.ASSEMBLY_NOTIFY_SUCCESS: True,
     #
     SettingKeys.EDITOR_CODE_FONT_BOLD: True,
     SettingKeys.EDITOR_CODE_FONT_SIZE: 14,

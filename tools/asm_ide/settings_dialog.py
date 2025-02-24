@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QGroupBox,
+    QLineEdit,
     QSpinBox,
     QVBoxLayout,
 )
@@ -19,6 +20,8 @@ class SettingsDialog(QDialog):
         settings = Settings()
 
         QVBoxLayout(self)
+
+        # Application Group
 
         self._app_group = QGroupBox("Application", self)
         self._app_group.setLayout(QVBoxLayout())
@@ -49,6 +52,27 @@ class SettingsDialog(QDialog):
         )
 
         self.layout().addWidget(self._app_group)
+
+        # Assembly Group
+
+        self._assembly_group = QGroupBox("Assembly", self)
+        self._assembly_group.setLayout(QVBoxLayout())
+
+        self._assembly_notify_success_cb = QCheckBox("Notify about successful assembly")
+        self._assembly_notify_success_cb.setChecked(settings.value(SettingKeys.ASSEMBLY_NOTIFY_SUCCESS))
+
+        self._assembly_command_input = QLineEdit()
+        self._assembly_command_input.setPlaceholderText(settings.value(SettingKeys.ASSEMBLY_COMMAND))
+        self._assembly_command_input.setText(settings.value(SettingKeys.ASSEMBLY_COMMAND))
+
+        self._assembly_group.layout().addWidget(self._assembly_notify_success_cb)
+        self._assembly_group.layout().addLayout(
+            label_and_widget("Assembler command", self._assembly_command_input, add_stretch=False)
+        )
+
+        self.layout().addWidget(self._assembly_group)
+
+        # Editor Group
 
         self._editor_group = QGroupBox("Editor", self)
         self._editor_group.setLayout(QVBoxLayout())
@@ -98,6 +122,9 @@ class SettingsDialog(QDialog):
         settings.setValue(SettingKeys.APP_REMEMBER_OPEN_FILES, self._app_remember_open_files_cb.isChecked())
         settings.setValue(SettingKeys.APP_SAVE_AUTOMATICALLY, self._app_auto_save_cb.isChecked())
         settings.setValue(SettingKeys.APP_START_MAXIMIZED, self._app_start_maximized_cb.isChecked())
+
+        settings.setValue(SettingKeys.ASSEMBLY_NOTIFY_SUCCESS, self._assembly_notify_success_cb.isChecked())
+        settings.setValue(SettingKeys.ASSEMBLY_COMMAND, self._assembly_command_input.text())
 
         settings.setValue(SettingKeys.EDITOR_CODE_FONT_BOLD, self._editor_code_font_bold_cb.isChecked())
         settings.setValue(SettingKeys.EDITOR_CODE_FONT_SIZE, self._editor_code_font_size_sb.value())
