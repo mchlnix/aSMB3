@@ -28,5 +28,4 @@ if __name__ == "__main__":
         )
         box.exec()
 
-        app.exec()
         raise
