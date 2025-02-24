@@ -28,4 +28,4 @@ git tag -a "$NEW_VERSION"
 echo "Pushing changes and new release to github. (Press Enter)"
 read
 git push
-git push --tags
+git push origin tag "$NEW_VERSION"
