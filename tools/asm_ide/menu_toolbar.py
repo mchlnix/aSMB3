@@ -66,6 +66,11 @@ class MenuToolbar(QToolBar):
         self._update_navigation_buttons()
         # Navigation Buttons End
 
+        self.addSeparator()
+
+        self.assemble_rom_action = self.addAction("Assemble ROM")
+        self.assemble_rom_action.setIcon(icon("terminal.svg"))
+
     def update_save_status(self, current_document_is_modified: bool, any_document_is_modified: bool):
         self.save_current_file_action.setEnabled(current_document_is_modified)
         self.save_all_files_action.setEnabled(any_document_is_modified)
