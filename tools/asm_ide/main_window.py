@@ -135,6 +135,8 @@ class MainWindow(QMainWindow):
         if current_code_area is None:
             return
 
+        offset_side = offset_top = 20
+
         search_term = current_code_area.textCursor().selectedText()
 
         data_by_file = self._get_asm_with_local_copies()
@@ -143,11 +145,11 @@ class MainWindow(QMainWindow):
         self._global_search_widget.search_result_clicked.connect(self.follow_redirect)
 
         self._global_search_widget.setMaximumSize(
-            current_code_area.size() - QSize(40 + current_code_area.viewportMargins().left(), 40)
+            current_code_area.size()
+            - QSize(current_code_area.viewportMargins().left() + offset_side * 2, offset_top * 2)
         )
 
-        pos_in_self = QPoint(current_code_area.viewportMargins().left(), 0)
-        pos_in_self += QPoint(20, 20)
+        pos_in_self = QPoint(current_code_area.viewportMargins().left() + offset_side, offset_top)
 
         self._global_search_widget.move(pos_in_self)
 

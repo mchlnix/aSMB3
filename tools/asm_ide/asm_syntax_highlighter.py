@@ -1,4 +1,6 @@
-from PySide6.QtCore import QRegularExpression
+from typing import Generator
+
+from PySide6.QtCore import QRegularExpression, QRegularExpressionMatchIterator
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat
 
 from tools.asm_ide.reference_finder import (
@@ -70,6 +72,12 @@ _COLORS = [
     _COMMENT_COLOR,
 ]
 
+_REF_TYPE_TO_COLOR = {
+    ReferenceType.CONSTANT: _CONST_COLOR,
+    ReferenceType.RAM_VAR: _RAM_VARIABLE_COLOR,
+    ReferenceType.LABEL: _LABEL_COLOR,
+}
+
 
 class AsmSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, parent, reference_finder: ReferenceFinder):
@@ -77,69 +85,75 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
 
         self._reference_finder = reference_finder
 
-        self.definition_under_cursor: ReferenceDefinition | None = None
+        self.reference_under_cursor: ReferenceDefinition | None = None
 
     def highlightBlock(self, line: str, clickable=False):
         self.setFormat(0, len(line) - 1, _DEFAULT_TEXT_COLOR)
-        if is_instruction(line):
-            start = 0
-            end = line.find(" ", start)
-            instruction_length = end - start
 
-            self.setFormat(start, instruction_length, _INSTRUCTION_COLOR)
+        self._format_instructions_in_line(line)
+        self._format_directives_in_line(line)
 
-        if is_generic_directive(line.strip()):
-            start = line.find(".")
-            end = line.find(" ", start)
-            directive_length = end - start
-
-            self.setFormat(start, directive_length, _DIRECTIVE_COLOR)
-
-        for expression, color in zip(_REGEXS, _COLORS):
+        for expression, color in zip(_REGEXS, _COLORS, strict=True):
             match_iterator = expression.globalMatch(line)
 
-            while match_iterator.hasNext():
-                match = match_iterator.next()
+            for capture_start, capture_length, capture_text in self._iter_matches(match_iterator):
+                # intervene, if this is a constant, ram variable or label under the mouse cursor
+                if expression != _CONST_LABEL_CALL_RAM_VAR_REGEX:
+                    self.setFormat(capture_start, capture_length, color)
+                    continue
 
-                # skip the 0th capture group, which is the whole match
-                for captured_index in range(1, match.lastCapturedIndex() + 1):
-                    # intervene, if this is a constant, ram variable or label under the mouse cursor
-                    if expression != _CONST_LABEL_CALL_RAM_VAR_REGEX:
-                        self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
+                if capture_text not in self._reference_finder.definitions:
+                    continue
 
-                    if (
-                        self.definition_under_cursor
-                        and match.capturedView(captured_index) == self.definition_under_cursor.name
-                    ):
-                        if self.definition_under_cursor.type == ReferenceType.CONSTANT:
-                            text_format = _CLICKABLE_CONST_COLOR
-                        elif self.definition_under_cursor.type == ReferenceType.RAM_VAR:
-                            text_format = _CLICKABLE_RAM_VAR_COLOR
-                        else:
-                            text_format = _CLICKABLE_LABEL_COLOR
+                if self.reference_under_cursor and capture_text == self.reference_under_cursor.name:
+                    self._format_reference_under_cursor(capture_length, capture_start)
+                    continue
 
-                        self.setFormat(
-                            match.capturedStart(captured_index),
-                            match.capturedLength(captured_index),
-                            text_format.toCharFormat(),
-                        )
+                *_, ref_type, _ = self._reference_finder.definitions[capture_text]
 
-                        continue
+                if ref_type not in _REF_TYPE_TO_COLOR:
+                    continue
 
-                    const_ram_or_label = match.capturedView(captured_index).strip()
+                self.setFormat(capture_start, capture_length, _REF_TYPE_TO_COLOR[ref_type])
 
-                    if const_ram_or_label not in self._reference_finder.definitions:
-                        continue
+    def _format_instructions_in_line(self, line):
+        if not is_instruction(line):
+            return
 
-                    *_, nv_type, _ = self._reference_finder.definitions[const_ram_or_label]
+        start = 0
+        end = line.find(" ", start)
+        instruction_length = end - start
 
-                    if nv_type == ReferenceType.CONSTANT:
-                        color = _CONST_COLOR
-                    elif nv_type == ReferenceType.RAM_VAR:
-                        color = _RAM_VARIABLE_COLOR
-                    elif nv_type == ReferenceType.LABEL:
-                        color = _LABEL_COLOR
-                    else:
-                        continue
+        self.setFormat(start, instruction_length, _INSTRUCTION_COLOR)
 
-                    self.setFormat(match.capturedStart(captured_index), match.capturedLength(captured_index), color)
+    def _format_directives_in_line(self, line):
+        if not is_generic_directive(line.strip()):
+            return
+
+        start = line.find(".")
+        end = line.find(" ", start)
+        directive_length = end - start
+
+        self.setFormat(start, directive_length, _DIRECTIVE_COLOR)
+
+    def _format_reference_under_cursor(self, capture_length, capture_start):
+        if self.reference_under_cursor is None:
+            return
+
+        if self.reference_under_cursor.type == ReferenceType.CONSTANT:
+            text_format = _CLICKABLE_CONST_COLOR
+        elif self.reference_under_cursor.type == ReferenceType.RAM_VAR:
+            text_format = _CLICKABLE_RAM_VAR_COLOR
+        else:
+            text_format = _CLICKABLE_LABEL_COLOR
+
+        self.setFormat(capture_start, capture_length, text_format.toCharFormat())
+
+    @staticmethod
+    def _iter_matches(match_iterator: QRegularExpressionMatchIterator) -> Generator[tuple[int, int, str], None, None]:
+        while match_iterator.hasNext():
+            match = match_iterator.next()
+
+            # skip the 0th capture group, which is the whole match
+            for index in range(1, match.lastCapturedIndex() + 1):
+                yield match.capturedStart(index), match.capturedLength(index), match.capturedView(index).strip()

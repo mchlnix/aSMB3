@@ -158,7 +158,7 @@ class ReferenceFinder(QRunnable):
     def _find_definitions_in_line(self, line, line_no, rel_path):
         clean_line = strip_comment(line)
 
-        for regex, nv_type in zip(
+        for regex, ref_type in zip(
             (_CONST_REGEX, _RAM_REGEX, _LABEL_REGEX),
             (ReferenceType.CONSTANT, ReferenceType.RAM_VAR, ReferenceType.LABEL),
         ):
@@ -173,7 +173,7 @@ class ReferenceFinder(QRunnable):
                 matched_value = match.capturedView(2)
 
                 self._definitions[matched_name] = ReferenceDefinition(
-                    matched_name, matched_value, rel_path, line_no, nv_type, " ".join(line.split())
+                    matched_name, matched_value, rel_path, line_no, ref_type, " ".join(line.split())
                 )
 
             if we_matched:

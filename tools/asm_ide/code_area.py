@@ -226,7 +226,7 @@ class CodeArea(QPlainTextEdit):
 
         # reset potentially old const highlighting
         self.last_word = ""
-        self.syntax_highlighter.definition_under_cursor = None
+        self.syntax_highlighter.reference_under_cursor = None
 
         if self.last_block is not None:
             self.syntax_highlighter.rehighlightBlock(self.last_block)
@@ -246,9 +246,9 @@ class CodeArea(QPlainTextEdit):
         tooltip.setFont(QFont("Monospace", 14))
 
         definition = self._reference_finder.definitions[word]
-        self.syntax_highlighter.definition_under_cursor = definition
+        self.syntax_highlighter.reference_under_cursor = definition
 
-        name, value, file, line_no, nv_type, line = definition
+        name, value, file, line_no, ref_type, line = definition
 
         tooltip_text = f"{file}+{line_no}: {name} = {value}"
 

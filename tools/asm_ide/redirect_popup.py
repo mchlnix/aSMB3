@@ -55,10 +55,10 @@ class ReferenceTableWidget(TableWidget):
 
     def set_references(self, definition: ReferenceDefinition, references: list[ReferenceDefinition]):
         # set row count
-        row_count = 1 + 1  # "Definitions" row and the actual definition
+        row_count = 1 + 1  # "Definitions" label row and the actual definition
 
         if references:
-            row_count += 1 + len(references)  # "References" row and references
+            row_count += 1 + len(references)  # "References" label row and references
 
         self.setRowCount(row_count)
         self.setColumnCount(3)

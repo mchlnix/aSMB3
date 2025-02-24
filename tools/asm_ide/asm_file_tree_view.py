@@ -20,9 +20,9 @@ class AsmFileTreeView(QTreeView):
         self.setModel(file_system_model)
 
         # hide everything, except the file name
-        self.setColumnHidden(1, True)
-        self.setColumnHidden(2, True)
-        self.setColumnHidden(3, True)
+        self.setColumnHidden(1, True)  # file size
+        self.setColumnHidden(2, True)  # file type
+        self.setColumnHidden(3, True)  # modified date
 
         self.setRootIndex(file_system_model.setRootPath(str(self._root_path)))
 
