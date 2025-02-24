@@ -10,6 +10,8 @@ class AsmFileTreeView(QTreeView):
     def __init__(self, root_path: Path, parent=None):
         super(AsmFileTreeView, self).__init__(parent)
 
+        self.setWindowTitle("File Tree Sidebar")
+
         self._root_path = root_path
 
         file_system_model = QFileSystemModel()

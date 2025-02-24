@@ -15,7 +15,7 @@ class MenuToolbar(QToolBar):
     """
 
     def __init__(self, parent=None):
-        super(MenuToolbar, self).__init__(parent)
+        super(MenuToolbar, self).__init__("Menu Toolbar", parent)
 
         self.setIconSize(TOOLBAR_ICON_SIZE)
         self.setMovable(False)
