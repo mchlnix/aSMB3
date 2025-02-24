@@ -15,6 +15,7 @@ from tools.asm_ide.global_search_popup import GlobalSearchPopup
 from tools.asm_ide.menu_toolbar import MenuToolbar
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.reference_finder import ReferenceFinder
+from tools.asm_ide.settings import SettingKeys, Settings
 from tools.asm_ide.tab_widget import TabWidget
 
 
@@ -53,6 +54,9 @@ class MainWindow(QMainWindow):
         self._set_up_menubar()
 
         self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
+
+        if Settings().value(SettingKeys.APP_START_MAXIMIZED):
+            self.showMaximized()
 
     def _set_up_toolbars(self):
         self._set_up_menu_toolbar()

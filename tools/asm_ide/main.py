@@ -4,12 +4,15 @@ import traceback
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from tools.asm_ide.main_window import MainWindow
+from tools.asm_ide.settings import init_settings
 
 if __name__ == "__main__":
     app = None
 
     try:
         app = QApplication(sys.argv)
+
+        init_settings()
 
         main_window = MainWindow()
         main_window.show()

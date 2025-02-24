@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from PySide6.QtCore import QSize, Qt, Signal, SignalInstance
-from PySide6.QtGui import QFocusEvent, QKeyEvent
+from PySide6.QtGui import QFocusEvent, QFont, QKeyEvent
 from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from tools.asm_ide.settings import SettingKeys, Settings
 from tools.asm_ide.table_widget import TableWidget
 
 
@@ -148,6 +149,12 @@ class GlobalSearchPopup(QWidget):
 
 
 class SearchResultsTable(TableWidget):
+
+    def __init__(self, parent=None):
+        super(SearchResultsTable, self).__init__(parent)
+
+        self.setFont(QFont("Monospace", Settings().value(SettingKeys.EDITOR_SEARCH_FONT_SIZE)))
+
     def set_search_results(self, search_results: list[SearchResult]):
         self.clear()
 

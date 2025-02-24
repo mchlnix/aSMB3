@@ -28,11 +28,8 @@ from tools.asm_ide.reference_finder import (
     ReferenceFinder,
 )
 from tools.asm_ide.search_bar import SearchBar, SearchDirection
+from tools.asm_ide.settings import SettingKeys, Settings
 from tools.asm_ide.util import ctrl_is_pressed
-
-_MAX_TOOLTIP_RESULTS = 30
-
-_TEXT_CHANGE_TRIGGER_DELAY = 1000  # milliseconds
 
 
 class CodeArea(QPlainTextEdit):
@@ -63,8 +60,7 @@ class CodeArea(QPlainTextEdit):
         self.text_document.setDocumentLayout(QPlainTextDocumentLayout(self.text_document))
         self.setDocument(self.text_document)
 
-        self._font = QFont("Monospace", 14)
-        self._font.setBold(True)
+        self._font = QFont("Monospace")
         self.text_document.setDefaultFont(self._font)
 
         # syntax highlighter
@@ -100,12 +96,22 @@ class CodeArea(QPlainTextEdit):
         Otherwise this signal would be sent for every single keystroke.
         """
         self._text_change_delay_timer.setSingleShot(True)
-        self._text_change_delay_timer.setInterval(_TEXT_CHANGE_TRIGGER_DELAY)
         self._text_change_delay_timer.timeout.connect(self.contents_changed.emit)
 
         self.document().contentsChange.connect(self._maybe_trigger_timer)
 
         self._redirect_pop_up: RedirectPopup | None = None
+
+        self.update_from_settings()
+
+    def update_from_settings(self):
+        settings = Settings()
+
+        self._font = QFont("Monospace", settings.value(SettingKeys.EDITOR_CODE_FONT_SIZE))
+        self._font.setBold(settings.value(SettingKeys.EDITOR_CODE_FONT_BOLD))
+        self.text_document.setDefaultFont(self._font)
+
+        self._text_change_delay_timer.setInterval(settings.value(SettingKeys.APP_REPARSE_DELAY_MS))
 
     def _maybe_trigger_timer(self, _: int, chars_added: int, chars_removed: int) -> None:
         """
@@ -237,13 +243,15 @@ class CodeArea(QPlainTextEdit):
         return super().mouseMoveEvent(e)
 
     def _update_tooltip(self, e, text_cursor, word):
+        settings = Settings()
+
         if word not in self._reference_finder.definitions:
             self.setToolTip(None)
             return
 
         self.last_word = word
         tooltip = QToolTip()
-        tooltip.setFont(QFont("Monospace", 14))
+        tooltip.setFont(QFont("Monospace", settings.value(SettingKeys.EDITOR_CODE_FONT_SIZE)))
 
         definition = self._reference_finder.definitions[word]
         self.syntax_highlighter.reference_under_cursor = definition
@@ -258,7 +266,7 @@ class CodeArea(QPlainTextEdit):
             for index, reference in enumerate(sorted(self._reference_finder.name_to_references[name]), 1):
                 tooltip_text += f"\n{reference.origin_file}+{reference.origin_line_no}: {reference.line}"
 
-                if index == _MAX_TOOLTIP_RESULTS:
+                if index == settings.value(SettingKeys.EDITOR_TOOLTIP_MAX_RESULTS):
                     tooltip_text += "\n  ..."
                     break
 

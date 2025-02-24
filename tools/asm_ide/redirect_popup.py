@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QTableWidgetItem,
@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from tools.asm_ide.reference_finder import ReferenceDefinition, ReferenceType
+from tools.asm_ide.settings import SettingKeys, Settings
 from tools.asm_ide.table_widget import TableWidget
 
 
@@ -52,6 +53,11 @@ class RedirectPopup(QWidget):
 class ReferenceTableWidget(TableWidget):
     _DEFINITION_LABEL_ROW = 0
     _REFERENCE_LABEL_ROW = 2
+
+    def __init__(self, parent=None):
+        super(ReferenceTableWidget, self).__init__(parent)
+
+        self.setFont(QFont("Monospace", Settings().value(SettingKeys.EDITOR_REFERENCE_FONT_SIZE)))
 
     def set_references(self, definition: ReferenceDefinition, references: list[ReferenceDefinition]):
         # set row count
