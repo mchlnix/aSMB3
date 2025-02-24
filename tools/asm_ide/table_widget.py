@@ -39,7 +39,7 @@ class TableWidget(QTableWidget):
         self.setSelectionMode(self.SelectionMode.SingleSelection)
 
         self.cellEntered.connect(self._select_row)
-        self.cellClicked.connect(self._on_click)
+        self.cellClicked.connect(self._on_position_selected)
 
         self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setVisible(False)
@@ -88,13 +88,50 @@ class TableWidget(QTableWidget):
         self.selectRow(row)
         self.blockSignals(False)
 
-    def _on_click(self, row: int, _column: int):
+    def _on_position_selected(self, row: int, _column: int = -1):
         file_path = Path(self.item(row, 0).text().strip())
         line_number = int(self.item(row, 1).text())
 
         self.row_clicked.emit(file_path, line_number)
 
         self.close()
+
+    def on_enter(self):
+        selected_row_index = self._selected_row_index()
+
+        if selected_row_index == -1:
+            return
+
+        self._on_position_selected(selected_row_index)
+
+    def highlight_next(self):
+        if (next_selected_index := self._next_valid_index(+1)) != -1:
+            self._select_row(next_selected_index)
+
+    def highlight_previous(self):
+        if (next_selected_index := self._next_valid_index(-1)) != -1:
+            self._select_row(next_selected_index)
+
+    def _next_valid_index(self, offset: int):
+        if self.rowCount() == 0:
+            return -1
+
+        selected_index = self._selected_row_index()
+
+        if selected_index == -1:
+            next_selected_index = 0
+        else:
+            next_selected_index = (selected_index + offset) % self.rowCount()
+
+        return next_selected_index
+
+    def _selected_row_index(self):
+        selected = self.selectedItems()
+
+        if not selected:
+            return -1
+
+        return selected[0].row()
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key.Key_Escape:

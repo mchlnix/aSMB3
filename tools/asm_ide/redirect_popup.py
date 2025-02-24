@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QFont, QKeyEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QTableWidgetItem,
@@ -127,8 +128,37 @@ class ReferenceTableWidget(TableWidget):
 
         super()._select_row(row, _column)
 
-    def _on_click(self, row: int, _column: int):
+    def _on_position_selected(self, row: int, _column: int = -1):
         if row in (self._DEFINITION_LABEL_ROW, self._REFERENCE_LABEL_ROW):
             return
 
-        super()._on_click(row, _column)
+        super()._on_position_selected(row, _column)
+
+    def _next_valid_index(self, offset: int) -> int:
+        next_index = super()._next_valid_index(offset)
+
+        if next_index in (self._DEFINITION_LABEL_ROW, self._REFERENCE_LABEL_ROW):
+            next_index += offset
+
+            next_index %= self.rowCount()
+
+        return next_index
+
+    def keyPressEvent(self, event: QKeyEvent):
+        # todo add pgup and stuff
+        if event.key() == Qt.Key.Key_Escape:
+            self.parent().close()
+
+        elif event.key() == Qt.Key.Key_Up:
+            self.highlight_previous()
+
+        elif event.key() == Qt.Key.Key_Down:
+            self.highlight_next()
+
+        elif event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
+            self.on_enter()
+
+        else:
+            return super().keyPressEvent(event)
+
+        event.accept()

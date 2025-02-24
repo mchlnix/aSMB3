@@ -26,16 +26,31 @@ class SearchResult(NamedTuple):
 
 class _SearchInput(QLineEdit):
     textChanged: SignalInstance
+    up_pressed = Signal()
+    down_pressed = Signal()
+    enter_pressed = Signal()
 
     def focusOutEvent(self, event: QFocusEvent):
         self.parent().focusOutEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent):
+        # todo add pgup and stuff
         if event.key() == Qt.Key.Key_Escape:
             self.parent().close()
-            event.accept()
 
-        return super().keyPressEvent(event)
+        elif event.key() == Qt.Key.Key_Up:
+            self.up_pressed.emit()
+
+        elif event.key() == Qt.Key.Key_Down:
+            self.down_pressed.emit()
+
+        elif event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
+            self.enter_pressed.emit()
+
+        else:
+            return super().keyPressEvent(event)
+
+        event.accept()
 
 
 class GlobalSearchPopup(QWidget):
@@ -63,6 +78,11 @@ class GlobalSearchPopup(QWidget):
 
         self.table_widget = SearchResultsTable()
         self.table_widget.row_clicked.connect(self.search_result_clicked.emit)
+
+        self._search_input.up_pressed.connect(self.table_widget.highlight_previous)
+        self._search_input.down_pressed.connect(self.table_widget.highlight_next)
+        self._search_input.enter_pressed.connect(self.table_widget.on_enter)
+
         self.table_widget.hide()
 
         self._layout.addWidget(self._search_input, stretch=0)
