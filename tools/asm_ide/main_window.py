@@ -1,4 +1,3 @@
-import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -144,10 +143,14 @@ class MainWindow(QMainWindow):
             self._write_modified_source_into_temp_dir(temp_path)
 
             # call the compiler and capture it's output
-            command = shlex.split(Settings().value(SettingKeys.ASSEMBLY_COMMAND))
-
             try:
-                subprocess.run(command, cwd=temp_path, check=True, capture_output=True)
+                subprocess.run(
+                    Settings().value(SettingKeys.ASSEMBLY_COMMAND),
+                    cwd=temp_path,
+                    shell=True,
+                    check=True,
+                    capture_output=True,
+                )
             except CalledProcessError as cpe:
                 QMessageBox.critical(
                     self, "Assembling the code failed", f"{cpe.stderr.decode()}\n{cpe.stdout.decode()}"

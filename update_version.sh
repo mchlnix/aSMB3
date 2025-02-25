@@ -25,7 +25,6 @@ echo "Making an annotated tag. First line should be '$NEW_VERSION Some-Code-Name
 read
 git tag -a "$NEW_VERSION"
 
-echo "Pushing changes and new release to github. (Press Enter)"
+echo "Pushing new release to github. (Press Enter)"
 read
-git push
 git push origin tag "$NEW_VERSION"
