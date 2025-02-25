@@ -13,7 +13,13 @@ from PySide6.QtGui import (
     QShortcut,
     Qt,
 )
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QToolBar
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QToolBar,
+)
 
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
 from tools.asm_ide.global_search_popup import GlobalSearchPopup
@@ -44,7 +50,7 @@ class MainWindow(QMainWindow):
         self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
         if not self._on_open(path=root_path):
-            quit()
+            QApplication.quit()
 
         self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
