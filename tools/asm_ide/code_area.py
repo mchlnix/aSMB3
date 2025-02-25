@@ -68,9 +68,9 @@ class CodeArea(QPlainTextEdit):
         self.syntax_highlighter.setDocument(self.text_document)
 
         # line number area
-        self._line_number_area = LineNumberArea(self)
-        self.updateRequest.connect(self._line_number_area.react_to_editor)
-        self.blockCountChanged.connect(self._line_number_area.update_text_measurements)
+        self.line_number_area = LineNumberArea(self)
+        self.updateRequest.connect(self.line_number_area.react_to_editor)
+        self.blockCountChanged.connect(self.line_number_area.update_text_measurements)
 
         # word under cursor
         self.last_block: QTextBlock | None = None
@@ -111,7 +111,7 @@ class CodeArea(QPlainTextEdit):
         self._font.setBold(settings.value(AppSettingKeys.EDITOR_CODE_FONT_BOLD))
         self.text_document.setDefaultFont(self._font)
 
-        self._line_number_area.update_text_measurements()
+        self.line_number_area.update_text_measurements()
 
         self._text_change_delay_timer.setInterval(settings.value(AppSettingKeys.APP_REPARSE_DELAY_MS))
 

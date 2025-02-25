@@ -7,6 +7,7 @@ from tools.asm_ide.tab_widget import TabWidget
 class Project:
     def __init__(self, tab_widget: TabWidget):
         self._tab_widget = tab_widget
+        self._tab_widget.highlighted_lines_changed.connect(self._update_highlighted_line_numbers)
         self._root_path = Path()
 
         self.is_open = False
@@ -20,6 +21,7 @@ class Project:
         self._root_path = root_path
 
         self._tab_widget.clear()
+        self._tab_widget.root_path = root_path
 
         if not self._restore_previous_tabs():
             self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
@@ -51,6 +53,17 @@ class Project:
         self._tab_widget.setCurrentIndex(project_settings.value(ProjectSettingKeys.OPEN_TAB_INDEX))
 
         return True
+
+    def _update_highlighted_line_numbers(self, abs_path: Path, line_numbers: list[int]):
+        """Writes the currently highlighted line numbers of the given file to the project settings."""
+
+        project_settings = ProjectSettings(self._root_path)
+        rel_path_str = str(abs_path.relative_to(self._root_path))
+
+        highlighted_numbers_by_file = project_settings.value(ProjectSettingKeys.HIGHLIGHTED_LINE_NUMBERS)
+        highlighted_numbers_by_file[rel_path_str] = line_numbers
+
+        project_settings.set_value(ProjectSettingKeys.HIGHLIGHTED_LINE_NUMBERS, highlighted_numbers_by_file)
 
     def close(self):
         if not self.is_open:

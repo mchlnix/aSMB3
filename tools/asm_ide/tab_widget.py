@@ -6,6 +6,7 @@ from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QMessageBox, QTabWidget
 
 from tools.asm_ide.code_area import CodeArea
+from tools.asm_ide.project_settings import ProjectSettingKeys, ProjectSettings
 from tools.asm_ide.reference_finder import ReferenceFinder
 from tools.asm_ide.tab_bar import TabBar
 
@@ -33,12 +34,20 @@ class TabWidget(QTabWidget):
     """
     contents_changed = Signal(Path)
 
+    highlighted_lines_changed = Signal(Path, list)
+    """
+    Return a list of all highlighted line numbers, and the absolute path of the file they belong to.
+    Is emitted when a new line number is highlighted, or an existing highlight is removed. 
+    """
+
     tabCloseRequested: SignalInstance
     currentChanged: SignalInstance
 
     def __init__(self, parent, reference_finder: ReferenceFinder):
         super(TabWidget, self).__init__(parent)
         self.setMouseTracking(True)
+
+        self.root_path = Path()
 
         self.tab_index_to_path: list[Path] = []
         """Absolute path of a file to the tab index it is represented in."""
@@ -98,6 +107,21 @@ class TabWidget(QTabWidget):
 
         self.setCurrentIndex(tab_index)
         self._update_title_of_tab_at_index(self.currentIndex())
+
+        self._restore_highlighted_line_numbers(abs_path, code_area)
+
+    def _restore_highlighted_line_numbers(self, abs_path, code_area):
+        # connect to signal and restore highlighted line numbers from previous session
+        code_area.line_number_area.line_number_highlighted.connect(
+            lambda numbers: self.highlighted_lines_changed.emit(abs_path, numbers)
+        )
+
+        rel_path = abs_path.relative_to(self.root_path)
+
+        highlighted_line_numbers = ProjectSettings(self.root_path).value(ProjectSettingKeys.HIGHLIGHTED_LINE_NUMBERS)
+        highlighted_line_numbers_for_this_file = highlighted_line_numbers.get(str(rel_path), [])
+
+        code_area.line_number_area.lines_to_highlight = highlighted_line_numbers_for_this_file
 
     def save_current_file(self):
         self._save_file_at_index(self.currentIndex())

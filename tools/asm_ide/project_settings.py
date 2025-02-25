@@ -5,11 +5,13 @@ from typing import Any
 
 
 class ProjectSettingKeys(StrEnum):
+    HIGHLIGHTED_LINE_NUMBERS = "highlight_line_numbers"
     OPEN_FILES = "open_files"
     OPEN_TAB_INDEX = " open_tab_index"
 
 
-_DEFAULT_VALUES: dict[ProjectSettingKeys, str | bool | int | list] = {
+_DEFAULT_VALUES: dict[ProjectSettingKeys, dict | list | int] = {
+    ProjectSettingKeys.HIGHLIGHTED_LINE_NUMBERS: {},
     ProjectSettingKeys.OPEN_FILES: [],
     ProjectSettingKeys.OPEN_TAB_INDEX: -1,
 }
