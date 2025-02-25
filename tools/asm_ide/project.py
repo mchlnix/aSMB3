@@ -35,20 +35,16 @@ class Project:
         """
         project_settings = ProjectSettings(self._root_path)
 
-        previously_open_files = project_settings.value(ProjectSettingKeys.OPEN_FILES)
+        previously_open_files: list[str] = project_settings.value(ProjectSettingKeys.OPEN_FILES)
 
         if not previously_open_files:
             return False
 
-        for rel_path_str, text_position, scroll_position in previously_open_files:
-            self._tab_widget.move_to_position(self._root_path / rel_path_str, text_position)
-            code_area = self._tab_widget.currentWidget()
+        for rel_path_str in previously_open_files:
+            abs_path = self._root_path / rel_path_str
 
-            if code_area is None:
-                continue
-
-            code_area.horizontalScrollBar().setValue(0)
-            code_area.verticalScrollBar().setValue(scroll_position)
+            self._tab_widget.open_or_switch_file(abs_path)
+            self._tab_widget.restore_position_for_tab(abs_path)
 
         self._tab_widget.setCurrentIndex(project_settings.value(ProjectSettingKeys.OPEN_TAB_INDEX))
 
@@ -69,18 +65,19 @@ class Project:
         if not self.is_open:
             return
 
-        open_files: list[tuple[str, int, int]] = []
-        for index, code_area in enumerate(self._tab_widget.widgets()):
+        project_settings = ProjectSettings(self._root_path)
+        project_settings.clear_open_files()
 
-            rel_path = self._tab_widget.tab_index_to_path[index].relative_to(self._root_path)
+        for index, code_area in enumerate(self._tab_widget.widgets()):
+            abs_path = self._tab_widget.tab_index_to_path[index]
+
             text_position = code_area.textCursor().position()
             scroll_position = code_area.verticalScrollBar().value()
 
-            open_files.append((str(rel_path), text_position, scroll_position))
+            project_settings.add_open_file(abs_path)
+            project_settings.save_position_in_file(abs_path, text_position, scroll_position)
 
         open_tab_index = self._tab_widget.currentIndex()
-
-        ProjectSettings(self._root_path).set_value(ProjectSettingKeys.OPEN_FILES, open_files)
-        ProjectSettings(self._root_path).set_value(ProjectSettingKeys.OPEN_TAB_INDEX, open_tab_index)
+        project_settings.set_value(ProjectSettingKeys.OPEN_TAB_INDEX, open_tab_index)
 
         self.is_open = False

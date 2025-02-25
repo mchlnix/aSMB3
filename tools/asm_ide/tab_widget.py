@@ -80,9 +80,9 @@ class TabWidget(QTabWidget):
             self.setCurrentIndex(tab_index)
 
         else:
-            self._load_asm_file(abs_path)
+            self._open_tab(abs_path)
 
-    def _load_asm_file(self, abs_path: Path) -> None:
+    def _open_tab(self, abs_path: Path) -> None:
         code_area = CodeArea(self, self.reference_finder)
         code_area.redirect_clicked.connect(self.redirect_clicked.emit)
         code_area.contents_changed.connect(lambda: self.contents_changed.emit(abs_path))
@@ -109,6 +109,26 @@ class TabWidget(QTabWidget):
         self._update_title_of_tab_at_index(self.currentIndex())
 
         self._restore_highlighted_line_numbers(abs_path, code_area)
+        self.restore_position_for_tab(abs_path)
+
+    def restore_position_for_tab(self, abs_path: Path):
+
+        if abs_path not in self.tab_index_to_path:
+            return
+
+        tab_index = self.tab_index_to_path.index(abs_path)
+
+        project_settings = ProjectSettings(self.root_path)
+        text_position, scroll_position = project_settings.load_position_in_file(abs_path)
+
+        self.move_to_position(abs_path, text_position)
+        code_area = self.widget(tab_index)
+
+        if code_area is None:
+            return
+
+        code_area.horizontalScrollBar().setValue(0)
+        code_area.verticalScrollBar().setValue(scroll_position)
 
     def _restore_highlighted_line_numbers(self, abs_path, code_area):
         # connect to signal and restore highlighted line numbers from previous session
@@ -239,6 +259,11 @@ class TabWidget(QTabWidget):
             and not self._ask_for_close_without_saving([str(path_of_tab)])
         ):
             return
+
+        text_position = code_area.textCursor().position()
+        scroll_position = code_area.verticalScrollBar().value()
+
+        ProjectSettings(self.root_path).save_position_in_file(path_of_tab, text_position, scroll_position)
 
         self.tab_index_to_path.pop(index)
         self.removeTab(index)
