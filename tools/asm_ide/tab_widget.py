@@ -41,6 +41,8 @@ class TabWidget(QTabWidget):
         self.setMouseTracking(True)
 
         self.tab_index_to_path: list[Path] = []
+        """Absolute path of a file to the tab index it is represented in."""
+
         self.reference_finder: ReferenceFinder = reference_finder
 
         tab_bar = TabBar(self)
@@ -60,6 +62,9 @@ class TabWidget(QTabWidget):
         return self.currentWidget()
 
     def open_or_switch_file(self, abs_path: Path):
+        if not abs_path.is_file():
+            return
+
         if abs_path in self.tab_index_to_path:
             tab_index = self.tab_index_to_path.index(abs_path)
 
@@ -194,7 +199,7 @@ class TabWidget(QTabWidget):
             if widget is not None:
                 yield widget
 
-    def _close_tab(self, index: int):
+    def _close_tab(self, index: int, ask_before_close=True):
         path_of_tab = self.tab_index_to_path[index]
 
         code_area = self.widget(index)
@@ -202,6 +207,7 @@ class TabWidget(QTabWidget):
         if (
             code_area is None
             or code_area.text_document.isModified()
+            and ask_before_close
             and not self._ask_for_close_without_saving([str(path_of_tab)])
         ):
             return
@@ -269,10 +275,10 @@ class TabWidget(QTabWidget):
         return self._ask_for_close_without_saving(modified_file_names)
 
     def clear(self):
-        self.tab_index_to_path.clear()
-        self.reference_finder.clear()
+        for index in reversed(range(self.count())):
+            self._close_tab(index, ask_before_close=False)
 
-        return super().clear()
+        self.reference_finder.clear()
 
     @staticmethod
     def _ask_for_close_without_saving(file_names: list[str]):
