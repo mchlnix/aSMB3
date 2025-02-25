@@ -45,6 +45,7 @@ class Project:
             if code_area is None:
                 continue
 
+            code_area.horizontalScrollBar().setValue(0)
             code_area.verticalScrollBar().setValue(scroll_position)
 
         self._tab_widget.setCurrentIndex(project_settings.value(ProjectSettingKeys.OPEN_TAB_INDEX))
