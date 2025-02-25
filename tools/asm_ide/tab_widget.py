@@ -148,6 +148,10 @@ class TabWidget(QTabWidget):
 
         current_code_area.centerCursor()
 
+    def move_to_position(self, abs_path: Path, block_index: int):
+        self.open_or_switch_file(abs_path)
+        self.scroll_to_position(block_index)
+
     def _on_current_tab_changed(self):
         self._emit_undo_redo_state()
         self._react_to_modification()

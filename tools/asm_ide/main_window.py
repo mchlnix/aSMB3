@@ -95,7 +95,7 @@ class MainWindow(QMainWindow):
 
         self._tab_widget.undo_redo_changed.connect(toolbar.update_undo_redo_buttons)
 
-        toolbar.position_change_requested.connect(self._move_to_position)
+        toolbar.position_change_requested.connect(self._tab_widget.move_to_position)
 
         toolbar.assemble_rom_action.triggered.connect(self._assemble_rom)
 
@@ -196,10 +196,6 @@ class MainWindow(QMainWindow):
     def _move_to_line(self, relative_file_path: Path, line_no: int):
         self._tab_widget.open_or_switch_file(self._root_path / relative_file_path)
         self._tab_widget.scroll_to_line(line_no)
-
-    def _move_to_position(self, abs_path: Path, block_index: int):
-        self._tab_widget.open_or_switch_file(abs_path)
-        self._tab_widget.scroll_to_position(block_index)
 
     def sizeHint(self):
         return QSize(1800, 1600)
