@@ -25,6 +25,7 @@ from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
 from tools.asm_ide.global_search_popup import GlobalSearchPopup
 from tools.asm_ide.menu_toolbar import MenuToolbar
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
+from tools.asm_ide.project import Project
 from tools.asm_ide.reference_finder import ReferenceFinder
 from tools.asm_ide.settings_dialog import SettingsDialog
 from tools.asm_ide.tab_widget import TabWidget
@@ -48,6 +49,8 @@ class MainWindow(QMainWindow):
         self._tab_widget.contents_changed.connect(self._update_search_index)
         self._tab_widget.redirect_clicked.connect(self.follow_redirect)
 
+        self._project = Project(self._tab_widget)
+
         if not self._on_open(path=root_path):
             QApplication.quit()
 
@@ -63,8 +66,6 @@ class MainWindow(QMainWindow):
 
         self._set_up_toolbars()
         self._set_up_menubar()
-
-        self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
 
         if AppSettings().value(AppSettingKeys.APP_START_MAXIMIZED):
             self.showMaximized()
@@ -280,13 +281,13 @@ class MainWindow(QMainWindow):
         if path is None or not self._root_path_is_valid(path):
             return False
 
-        self._root_path = path
+        self._project.close()
 
-        self._tab_widget.clear()
+        self._root_path = path
 
         self._parse_with_progress_dialog()
 
-        self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
+        self._project.open(self._root_path)
 
         return True
 
@@ -329,5 +330,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent):
         if not self._tab_widget.ask_to_quit_all_tabs_without_saving():
             return event.ignore()
+
+        self._project.close()
 
         return super().closeEvent(event)
