@@ -35,7 +35,6 @@ class MainWindow(QMainWindow):
     def __init__(self, root_path: Path | None = None):
         super().__init__()
 
-        self.setWindowTitle("ASMB3 IDE")
         self.setMouseTracking(True)
 
         self._search_index_threads = QThreadPool()
@@ -51,11 +50,6 @@ class MainWindow(QMainWindow):
 
         self._project = Project(self._tab_widget)
 
-        if not self._on_open(path=root_path):
-            QApplication.quit()
-
-        self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
-
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp), self, self._tab_widget.to_previous_tab)
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown), self, self._tab_widget.to_next_tab)
         QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S), self, self._tab_widget.save_current_file)
@@ -70,15 +64,18 @@ class MainWindow(QMainWindow):
         if AppSettings().value(AppSettingKeys.APP_START_MAXIMIZED):
             self.showMaximized()
 
+        if not self._on_open(path=root_path):
+            QApplication.quit()
+
     def _set_up_toolbars(self):
         self._set_up_menu_toolbar()
         toolbar = QToolBar()
         toolbar.setMovable(False)
 
-        file_tree_view = AsmFileTreeView(self._root_path)
-        file_tree_view.file_clicked.connect(self._tab_widget.open_or_switch_file)
+        self._file_tree_view = AsmFileTreeView()
+        self._file_tree_view.file_clicked.connect(self._tab_widget.open_or_switch_file)
 
-        toolbar.addWidget(file_tree_view)
+        toolbar.addWidget(self._file_tree_view)
 
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, toolbar)
 
@@ -286,6 +283,9 @@ class MainWindow(QMainWindow):
         self._root_path = path
 
         self._parse_with_progress_dialog()
+
+        self._file_tree_view.set_root_path(self._root_path)
+        self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
 
         self._project.open(self._root_path)
 

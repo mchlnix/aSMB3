@@ -1,17 +1,23 @@
 from pathlib import Path
 
-from PySide6.QtCore import QModelIndex, Signal
+from PySide6.QtCore import QModelIndex, Signal, SignalInstance
 from PySide6.QtWidgets import QFileSystemModel, QTreeView
 
 
 class AsmFileTreeView(QTreeView):
     file_clicked = Signal(Path)
 
-    def __init__(self, root_path: Path, parent=None):
+    doubleClicked: SignalInstance
+
+    def __init__(self, parent=None):
         super(AsmFileTreeView, self).__init__(parent)
 
-        self.setWindowTitle("File Tree Sidebar")
+        self._root_path = Path()
 
+        self.setWindowTitle("File Tree Sidebar")
+        self.doubleClicked.connect(self.on_file_clicked)
+
+    def set_root_path(self, root_path: Path):
         self._root_path = root_path
 
         file_system_model = QFileSystemModel()
@@ -30,8 +36,6 @@ class AsmFileTreeView(QTreeView):
 
         prg_index = file_system_model.index(str(self._root_path / "PRG"), 0)
         self.expand(prg_index)
-
-        self.doubleClicked.connect(self.on_file_clicked)
 
     def on_file_clicked(self, model_index: QModelIndex):
         file_path = self._root_path / self.model().data(model_index, QFileSystemModel.Roles.FilePathRole)
