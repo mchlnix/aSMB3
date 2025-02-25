@@ -4,8 +4,8 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from tools.asm_ide.application_settings import init_settings
 from tools.asm_ide.main_window import MainWindow
-from tools.asm_ide.settings import init_settings
 
 if __name__ == "__main__":
     app = None

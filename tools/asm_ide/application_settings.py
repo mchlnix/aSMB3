@@ -8,7 +8,7 @@ class TooltipType(StrEnum):
     REFERENCES = "references"
 
 
-class SettingKeys(StrEnum):
+class AppSettingKeys(StrEnum):
     APP_REPARSE_DELAY_MS = "app_reparse_delay_ms"
     APP_REMEMBER_OPEN_FILES = "app_remember_open_files"  # currently unused
     APP_SAVE_AUTOMATICALLY = "app_save_automatically"  # currently unused
@@ -25,33 +25,33 @@ class SettingKeys(StrEnum):
     EDITOR_TOOLTIP_MAX_RESULTS = "editor_tooltip_max_results"
 
 
-_DEFAULT_VALUES: dict[SettingKeys, str | int | bool] = {
-    SettingKeys.APP_REPARSE_DELAY_MS: 1000,
-    SettingKeys.APP_REMEMBER_OPEN_FILES: False,
-    SettingKeys.APP_SAVE_AUTOMATICALLY: False,
-    SettingKeys.APP_START_MAXIMIZED: False,
+_DEFAULT_VALUES: dict[AppSettingKeys, str | int | bool] = {
+    AppSettingKeys.APP_REPARSE_DELAY_MS: 1000,
+    AppSettingKeys.APP_REMEMBER_OPEN_FILES: False,
+    AppSettingKeys.APP_SAVE_AUTOMATICALLY: False,
+    AppSettingKeys.APP_START_MAXIMIZED: False,
     #
-    SettingKeys.ASSEMBLY_COMMAND: "nesasm.exe smb3.asm",
-    SettingKeys.ASSEMBLY_NOTIFY_SUCCESS: True,
+    AppSettingKeys.ASSEMBLY_COMMAND: "nesasm.exe smb3.asm",
+    AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS: True,
     #
-    SettingKeys.EDITOR_CODE_FONT_BOLD: True,
-    SettingKeys.EDITOR_CODE_FONT_SIZE: 14,
-    SettingKeys.EDITOR_REFERENCE_FONT_SIZE: 12,
-    SettingKeys.EDITOR_SEARCH_FONT_SIZE: 12,
-    SettingKeys.EDITOR_TOOLTIP_TYPE: TooltipType.REFERENCES,
-    SettingKeys.EDITOR_TOOLTIP_MAX_RESULTS: 30,
+    AppSettingKeys.EDITOR_CODE_FONT_BOLD: True,
+    AppSettingKeys.EDITOR_CODE_FONT_SIZE: 14,
+    AppSettingKeys.EDITOR_REFERENCE_FONT_SIZE: 12,
+    AppSettingKeys.EDITOR_SEARCH_FONT_SIZE: 12,
+    AppSettingKeys.EDITOR_TOOLTIP_TYPE: TooltipType.REFERENCES,
+    AppSettingKeys.EDITOR_TOOLTIP_MAX_RESULTS: 30,
 }
 
 
-class Settings(QSettings):
+class AppSettings(QSettings):
     def __init__(self):
-        super(Settings, self).__init__("mchlnix", "aSMB3")
+        super(AppSettings, self).__init__("mchlnix", "aSMB3")
 
-    def value(self, key: SettingKeys, default_value=None, type_=None):
+    def value(self, key: AppSettingKeys, default_value=None, type_=None):
         if key in _DEFAULT_VALUES and type_ is None:
             type_ = type(_DEFAULT_VALUES[key])
 
-        returned_value = super(Settings, self).value(key, default_value)
+        returned_value = super(AppSettings, self).value(key, default_value)
 
         if returned_value is None:
             return returned_value
@@ -65,13 +65,13 @@ class Settings(QSettings):
 
 
 def init_settings():
-    settings = Settings()
+    settings = AppSettings()
 
-    for key in SettingKeys:
+    for key in AppSettingKeys:
 
         # fixes wrong default command in version <0.4
-        if key == SettingKeys.ASSEMBLY_COMMAND:
-            command = settings.value(SettingKeys.ASSEMBLY_COMMAND)
+        if key == AppSettingKeys.ASSEMBLY_COMMAND:
+            command = settings.value(AppSettingKeys.ASSEMBLY_COMMAND)
             command = command.replace("%f", "smb3.asm")
 
             settings.setValue(key, command)

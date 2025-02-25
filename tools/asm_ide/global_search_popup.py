@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from tools.asm_ide.settings import SettingKeys, Settings
+from tools.asm_ide.application_settings import AppSettingKeys, AppSettings
 from tools.asm_ide.table_widget import TableWidget
 
 
@@ -173,7 +173,7 @@ class SearchResultsTable(TableWidget):
     def __init__(self, parent=None):
         super(SearchResultsTable, self).__init__(parent)
 
-        self.setFont(QFont("Monospace", Settings().value(SettingKeys.EDITOR_SEARCH_FONT_SIZE)))
+        self.setFont(QFont("Monospace", AppSettings().value(AppSettingKeys.EDITOR_SEARCH_FONT_SIZE)))
         self._bold_font = self.font()
         self._bold_font.setBold(True)
 

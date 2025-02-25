@@ -20,12 +20,12 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+from tools.asm_ide.application_settings import AppSettingKeys, AppSettings
 from tools.asm_ide.asm_file_tree_view import AsmFileTreeView
 from tools.asm_ide.global_search_popup import GlobalSearchPopup
 from tools.asm_ide.menu_toolbar import MenuToolbar
 from tools.asm_ide.parsing_progress_dialog import ParsingProgressDialog
 from tools.asm_ide.reference_finder import ReferenceFinder
-from tools.asm_ide.settings import SettingKeys, Settings
 from tools.asm_ide.settings_dialog import SettingsDialog
 from tools.asm_ide.tab_widget import TabWidget
 
@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
 
         self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
 
-        if Settings().value(SettingKeys.APP_START_MAXIMIZED):
+        if AppSettings().value(AppSettingKeys.APP_START_MAXIMIZED):
             self.showMaximized()
 
     def _set_up_toolbars(self):
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
             # call the compiler and capture it's output
             try:
                 subprocess.run(
-                    Settings().value(SettingKeys.ASSEMBLY_COMMAND),
+                    AppSettings().value(AppSettingKeys.ASSEMBLY_COMMAND),
                     cwd=temp_path,
                     shell=True,
                     check=True,
@@ -161,7 +161,7 @@ class MainWindow(QMainWindow):
                 # copy back the compiled ROM
                 shutil.copy((temp_path / "smb3.nes"), self._root_path / "smb3.nes")
 
-                if Settings().value(SettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
+                if AppSettings().value(AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
                     QMessageBox.information(self, "Assembling finished", "Assembly was successful")
 
         self.setCursor(old_cursor)

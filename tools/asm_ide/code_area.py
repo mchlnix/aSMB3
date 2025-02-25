@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QToolTip,
 )
 
+from tools.asm_ide.application_settings import AppSettingKeys, AppSettings
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
 from tools.asm_ide.redirect_popup import RedirectPopup
@@ -28,7 +29,6 @@ from tools.asm_ide.reference_finder import (
     ReferenceFinder,
 )
 from tools.asm_ide.search_bar import SearchBar, SearchDirection
-from tools.asm_ide.settings import SettingKeys, Settings
 from tools.asm_ide.util import ctrl_is_pressed
 
 
@@ -105,15 +105,15 @@ class CodeArea(QPlainTextEdit):
         self.update_from_settings()
 
     def update_from_settings(self):
-        settings = Settings()
+        settings = AppSettings()
 
-        self._font = QFont("Monospace", settings.value(SettingKeys.EDITOR_CODE_FONT_SIZE))
-        self._font.setBold(settings.value(SettingKeys.EDITOR_CODE_FONT_BOLD))
+        self._font = QFont("Monospace", settings.value(AppSettingKeys.EDITOR_CODE_FONT_SIZE))
+        self._font.setBold(settings.value(AppSettingKeys.EDITOR_CODE_FONT_BOLD))
         self.text_document.setDefaultFont(self._font)
 
         self._line_number_area.update_text_measurements()
 
-        self._text_change_delay_timer.setInterval(settings.value(SettingKeys.APP_REPARSE_DELAY_MS))
+        self._text_change_delay_timer.setInterval(settings.value(AppSettingKeys.APP_REPARSE_DELAY_MS))
 
     def _maybe_trigger_timer(self, _: int, chars_added: int, chars_removed: int) -> None:
         """
@@ -245,7 +245,7 @@ class CodeArea(QPlainTextEdit):
         return super().mouseMoveEvent(e)
 
     def _update_tooltip(self, e, text_cursor, word):
-        settings = Settings()
+        settings = AppSettings()
 
         if word not in self._reference_finder.definitions:
             self.setToolTip(None)
@@ -253,7 +253,7 @@ class CodeArea(QPlainTextEdit):
 
         self.last_word = word
         tooltip = QToolTip()
-        tooltip.setFont(QFont("Monospace", settings.value(SettingKeys.EDITOR_CODE_FONT_SIZE)))
+        tooltip.setFont(QFont("Monospace", settings.value(AppSettingKeys.EDITOR_CODE_FONT_SIZE)))
 
         definition = self._reference_finder.definitions[word]
         self.syntax_highlighter.reference_under_cursor = definition
@@ -261,7 +261,7 @@ class CodeArea(QPlainTextEdit):
         name, value, file, line_no, ref_type, line = definition
 
         tooltip_text = f"{file}+{line_no}: {name} = {value}"
-        tooltip_max_results = settings.value(SettingKeys.EDITOR_TOOLTIP_MAX_RESULTS)
+        tooltip_max_results = settings.value(AppSettingKeys.EDITOR_TOOLTIP_MAX_RESULTS)
 
         if self._reference_finder.name_to_references.get(name, False) and tooltip_max_results != 0:
             tooltip_text += "\n\nReferenced at:"
