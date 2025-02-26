@@ -24,7 +24,9 @@ class SettingsDialog(QDialog):
         # Application Group
 
         self._app_group = QGroupBox("Application", self)
-        self._app_group.setLayout(QVBoxLayout())
+
+        app_group_layout = QVBoxLayout()
+        self._app_group.setLayout(app_group_layout)
 
         self._app_remember_open_files_cb = QCheckBox("Remember open files on startup")
         self._app_remember_open_files_cb.setChecked(settings.value(AppSettingKeys.APP_REMEMBER_OPEN_FILES))
@@ -44,10 +46,10 @@ class SettingsDialog(QDialog):
         self._app_reparse_delay_sb.setMaximum(60 * 1000)
         self._app_reparse_delay_sb.setValue(settings.value(AppSettingKeys.APP_REPARSE_DELAY_MS))
 
-        self._app_group.layout().addWidget(self._app_remember_open_files_cb)
-        self._app_group.layout().addWidget(self._app_auto_save_cb)
-        self._app_group.layout().addWidget(self._app_start_maximized_cb)
-        self._app_group.layout().addLayout(
+        app_group_layout.addWidget(self._app_remember_open_files_cb)
+        app_group_layout.addWidget(self._app_auto_save_cb)
+        app_group_layout.addWidget(self._app_start_maximized_cb)
+        app_group_layout.addLayout(
             label_and_widget("Delay until document is reparsed, after change (ms)", self._app_reparse_delay_sb)
         )
 
@@ -56,7 +58,9 @@ class SettingsDialog(QDialog):
         # Assembly Group
 
         self._assembly_group = QGroupBox("Assembly", self)
-        self._assembly_group.setLayout(QVBoxLayout())
+
+        assembly_group_layout = QVBoxLayout()
+        self._assembly_group.setLayout(assembly_group_layout)
 
         self._assembly_notify_success_cb = QCheckBox("Notify about successful assembly")
         self._assembly_notify_success_cb.setChecked(settings.value(AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS))
@@ -65,8 +69,8 @@ class SettingsDialog(QDialog):
         self._assembly_command_input.setPlaceholderText(settings.value(AppSettingKeys.ASSEMBLY_COMMAND))
         self._assembly_command_input.setText(settings.value(AppSettingKeys.ASSEMBLY_COMMAND))
 
-        self._assembly_group.layout().addWidget(self._assembly_notify_success_cb)
-        self._assembly_group.layout().addLayout(
+        assembly_group_layout.addWidget(self._assembly_notify_success_cb)
+        assembly_group_layout.addLayout(
             label_and_widget("Assembler command", self._assembly_command_input, add_stretch=False)
         )
 
@@ -75,7 +79,9 @@ class SettingsDialog(QDialog):
         # Editor Group
 
         self._editor_group = QGroupBox("Editor", self)
-        self._editor_group.setLayout(QVBoxLayout())
+
+        editor_group_layout = QVBoxLayout()
+        self._editor_group.setLayout(editor_group_layout)
 
         self._editor_code_font_bold_cb = QCheckBox("Code Font is bold")
         self._editor_code_font_bold_cb.setChecked(settings.value(AppSettingKeys.EDITOR_CODE_FONT_BOLD))
@@ -96,15 +102,13 @@ class SettingsDialog(QDialog):
         self._editor_tooltip_max_results_sb.setMinimum(-1)
         (self._editor_tooltip_max_results_sb.setValue(settings.value(AppSettingKeys.EDITOR_TOOLTIP_MAX_RESULTS)))
 
-        self._editor_group.layout().addWidget(self._editor_code_font_bold_cb)
-        self._editor_group.layout().addLayout(label_and_widget("Code Font Size", self._editor_code_font_size_sb))
-        self._editor_group.layout().addLayout(
+        editor_group_layout.addWidget(self._editor_code_font_bold_cb)
+        editor_group_layout.addLayout(label_and_widget("Code Font Size", self._editor_code_font_size_sb))
+        editor_group_layout.addLayout(
             label_and_widget("Reference Popup Font Size", self._editor_reference_font_size_sb)
         )
-        self._editor_group.layout().addLayout(
-            label_and_widget("Search Result Font Size", self._editor_search_font_size_sb)
-        )
-        self._editor_group.layout().addLayout(
+        editor_group_layout.addLayout(label_and_widget("Search Result Font Size", self._editor_search_font_size_sb))
+        editor_group_layout.addLayout(
             label_and_widget("Maximum number of results in ToolTip", self._editor_tooltip_max_results_sb)
         )
 

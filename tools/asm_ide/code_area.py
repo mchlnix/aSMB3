@@ -132,7 +132,7 @@ class CodeArea(QPlainTextEdit):
 
     def _search(self, direction: SearchDirection = SearchDirection.FORWARDS):
         """
-        Searches for the next instance of the search term in the search bar, if there is one.
+        Searches for the next instance of the search term in the searchbar if there is one.
 
         SearchDirection.BACKWARDS means, go to the previous match, if one exists.
 
@@ -144,7 +144,7 @@ class CodeArea(QPlainTextEdit):
         """
         current_cursor = self.textCursor()
 
-        # there is no neutral or default find flag, so we have to make our own
+        # there is no neutral or default find-flag, so we have to make our own
         find_flags = QTextDocument.FindFlag.FindBackward & QTextDocument.FindFlag.FindWholeWords
 
         if direction == SearchDirection.BACKWARDS:
@@ -210,7 +210,7 @@ class CodeArea(QPlainTextEdit):
         current_line_selection = QTextEdit.ExtraSelection()
 
         line_highlight_format = QTextCharFormat()
-        line_highlight_format.setProperty(QTextFormat.FullWidthSelection, True)
+        line_highlight_format.setProperty(QTextFormat.Property.FullWidthSelection, True)
         line_highlight_format.setBackground(QBrush(QColor(255, 255, 153)))
 
         current_line_selection.cursor = self.textCursor()
@@ -307,7 +307,7 @@ class CodeArea(QPlainTextEdit):
 
         point = self._find_open_point(e)
 
-        # highlight current line in the pop up
+        # highlight current line in the popup
         # current_line_number = self.textCursor().blockNumber() + 1
         # self._redirect_pop_up.table_widget.highlight_row(definition.origin_file, current_line_number)
 

@@ -9,7 +9,7 @@ class TabBar(QTabBar):
         super(TabBar, self).__init__(parent)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MiddleButton:
+        if event.button() == Qt.MouseButton.MiddleButton:
             tab_index = self.tabAt(event.pos())
 
             if 0 <= tab_index <= self.count():

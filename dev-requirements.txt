@@ -1,7 +1,8 @@
-black==24.3.0
+black
 hypothesis
+isort
 mypy
 pytest
 pytest-qt
-refurb==2.0.0
-ruff==0.3.5
+refurb
+ruff

@@ -69,7 +69,7 @@ def init_settings():
 
     for key in AppSettingKeys:
 
-        # fixes wrong default command in version <0.4
+        # fixes wrong default command in versions <0.4
         if key == AppSettingKeys.ASSEMBLY_COMMAND:
             command = settings.value(AppSettingKeys.ASSEMBLY_COMMAND)
             command = command.replace("%f", "smb3.asm")

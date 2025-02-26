@@ -10,15 +10,15 @@ from tools.asm_ide.reference_finder import (
 )
 from tools.asm_ide.util import is_generic_directive, is_instruction
 
-_DEC_NUMBER_REGEX = QRegularExpression("([0-9]+)")
-_HEX_NUMBER_REGEX = QRegularExpression("(\$[A-Fa-f0-9]+)")
-_BIN_NUMBER_REGEX = QRegularExpression("(\%[0-1]+)")
-_CONST_DEF_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\s*\=")
-_DIRECTIVE_REGEX = QRegularExpression("(\.[A-Za-z_][A-Za-z]*)")
-_STRING_REGEX = QRegularExpression('("[^"]*")')
-_COMMENT_REGEX = QRegularExpression("(;.*)")
-_LABEL_DEF_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:")
-_CONST_LABEL_CALL_RAM_VAR_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)")
+_DEC_NUMBER_REGEX = QRegularExpression(r"([0-9]+)")
+_HEX_NUMBER_REGEX = QRegularExpression(r"(\$[A-Fa-f0-9]+)")
+_BIN_NUMBER_REGEX = QRegularExpression(r"(\%[0-1]+)")
+_CONST_DEF_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)\s*\=")
+_DIRECTIVE_REGEX = QRegularExpression(r"(\.[A-Za-z_][A-Za-z]*)")
+_STRING_REGEX = QRegularExpression(r"(\"[^\"]*\")")
+_COMMENT_REGEX = QRegularExpression(r"(;.*)")
+_LABEL_DEF_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)\:")
+_CONST_LABEL_CALL_RAM_VAR_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)")
 
 
 _DEC_NUMBER_COLOR = QColor.fromRgb(255, 0, 0)
@@ -48,7 +48,7 @@ _CLICKABLE_RAM_VAR_COLOR = QTextCharFormat()
 _CLICKABLE_RAM_VAR_COLOR.setForeground(_RAM_VARIABLE_COLOR)
 _CLICKABLE_RAM_VAR_COLOR.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline)
 
-_REGEXS = [
+_REGEXPS = [
     _DEC_NUMBER_REGEX,
     _HEX_NUMBER_REGEX,
     _BIN_NUMBER_REGEX,
@@ -93,7 +93,7 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
         self._format_instructions_in_line(line)
         self._format_directives_in_line(line)
 
-        for expression, color in zip(_REGEXS, _COLORS, strict=True):
+        for expression, color in zip(_REGEXPS, _COLORS, strict=True):
             match_iterator = expression.globalMatch(line)
 
             for capture_start, capture_length, capture_text in self._iter_matches(match_iterator):

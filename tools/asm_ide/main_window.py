@@ -31,6 +31,25 @@ from tools.asm_ide.settings_dialog import SettingsDialog
 from tools.asm_ide.tab_widget import TabWidget
 
 
+def _get_disassembly_root() -> Path | None:
+    dis_asm_folder = QFileDialog.getExistingDirectory(None, "Select Disassembly Directory")
+
+    if not dis_asm_folder:
+        return None
+
+    return Path(dis_asm_folder)
+
+
+def _root_path_is_valid(root_path: Path):
+    if not (root_path / "smb3.asm").exists():
+        QMessageBox.critical(
+            None, "Invalid Disassembly Directory", "The directory you selected did not contain an 'smb3.asm' file."
+        )
+        return False
+
+    return True
+
+
 class MainWindow(QMainWindow):
     def __init__(self, root_path: Path | None = None):
         super().__init__()
@@ -160,7 +179,9 @@ class MainWindow(QMainWindow):
                 shutil.copy((temp_path / "smb3.nes"), self._root_path / "smb3.nes")
 
                 if AppSettings().value(AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
-                    QMessageBox.information(self, "Assembling finished", "Assembly was successful")
+                    QMessageBox.information(
+                        self, "Assembling finished", "Assembly was successful", QMessageBox.StandardButton.Ok
+                    )
 
         self.setCursor(old_cursor)
 
@@ -245,9 +266,9 @@ class MainWindow(QMainWindow):
 
     def _get_asm_with_local_copies(self):
         """
-        Returns a dictionary whose keys are relative Paths to the PRG and smb3.asm file and the values are the current
+        Returns a dictionary whose keys are relative Paths to the PRG and smb3.asm file, and the values are the current
         contents of these files.
-        Either from disk, or from the open code area.
+        Either from disk or from the open code area.
         """
         # todo only parse the PRG files mentioned in smb3.asm?
         asm: dict[Path, str] = dict()
@@ -273,9 +294,9 @@ class MainWindow(QMainWindow):
             return False
 
         if path is None:
-            path = self._get_disassembly_root()
+            path = _get_disassembly_root()
 
-        if path is None or not self._root_path_is_valid(path):
+        if path is None or not _root_path_is_valid(path):
             return False
 
         self._project.close()
@@ -291,16 +312,6 @@ class MainWindow(QMainWindow):
 
         return True
 
-    @staticmethod
-    def _root_path_is_valid(root_path: Path):
-        if not (root_path / "smb3.asm").exists():
-            QMessageBox.critical(
-                None, "Invalid Disassembly Directory", "The directory you selected did not contain an 'smb3.asm' file."
-            )
-            return False
-
-        return True
-
     def _parse_with_progress_dialog(self):
         parse_call = self._get_populated_parse_call(None)
         progress_dialog = ParsingProgressDialog(parse_call)
@@ -309,14 +320,6 @@ class MainWindow(QMainWindow):
         self._reference_finder.signals.progress_made.connect(progress_dialog.update_text)
 
         progress_dialog.start()
-
-    def _get_disassembly_root(self) -> Path | None:
-        dis_asm_folder = QFileDialog.getExistingDirectory(self, "Select Disassembly Directory")
-
-        if not dis_asm_folder:
-            return None
-
-        return Path(dis_asm_folder)
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.buttons() & Qt.MouseButton.ForwardButton:

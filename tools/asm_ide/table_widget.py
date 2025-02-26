@@ -83,7 +83,7 @@ class TableWidget(QTableWidget):
         # If the cursor is on the last row and the row is not fully visible, all rows will scroll one higher to show
         # the now selected row fully.
         # But that would put the cursor over the next, not fully visible row, causing the same to happen again.
-        # This either scrolls the table until the end in one go, or cause a recursion limit error.
+        # This either scrolls the table until the end in one go, or causes a recursion limit error.
         self.blockSignals(True)
         self.selectRow(row)
         self.blockSignals(False)

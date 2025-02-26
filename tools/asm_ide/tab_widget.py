@@ -103,7 +103,7 @@ class TabWidget(QTabWidget):
         # Will be overwritten when the user clicks somewhere into the document.
         code_area.text_position_clicked.emit(0)
 
-        code_area.moveCursor(QTextCursor.Start)
+        code_area.moveCursor(QTextCursor.MoveOperation.Start)
 
         self.setCurrentIndex(tab_index)
         self._update_title_of_tab_at_index(self.currentIndex())

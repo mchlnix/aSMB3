@@ -67,7 +67,7 @@ class GlobalSearchPopup(QWidget):
 
         self.setMinimumWidth(500)
 
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self._search_input = _SearchInput()
         self._search_input.textChanged.connect(self._update_results)

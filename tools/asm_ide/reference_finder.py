@@ -10,6 +10,8 @@ from PySide6.QtCore import QObject, QRegularExpression, QRunnable, Signal
 from tools.asm_ide.util import strip_comment
 
 
+# todo keep track of macros
+# todo keep track of .func functions
 class ReferenceType(IntEnum):
     CONSTANT = auto()
     LABEL = auto()
@@ -26,13 +28,11 @@ class ReferenceDefinition(NamedTuple):
     line: str
 
 
-_CONST_REGEX = QRegularExpression("([A-Za-z][A-za-z0-9_]*)\s*\=\s*(\$[0-9A-F]+|\%[0-1]+|[0-9]+)")
-_LABEL_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:\s*(.*)")
-_RAM_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)\:\s*(\.ds.*)")
+_CONST_REGEX = QRegularExpression(r"([A-Za-z][A-za-z0-9_]*)\s*\=\s*(\$[0-9A-F]+|\%[0-1]+|[0-9]+)")
+_LABEL_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)\:\s*(.*)")
+_RAM_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)\:\s*(\.ds.*)")
 
-_CONST_LABEL_CALL_RAM_VAR_REGEX = QRegularExpression("([A-Za-z_][A-Za-z0-9_]*)")
-
-# todo keep track of macros
+_CONST_LABEL_CALL_RAM_VAR_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)")
 
 
 class ParserSignals(QObject):

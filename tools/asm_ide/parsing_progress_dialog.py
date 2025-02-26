@@ -13,7 +13,7 @@ class ParsingProgressDialog(QProgressDialog):
         self.setWindowTitle("Parsing Progress")
         self.setLabelText("Preparing to parse")
 
-        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         self.show()
 

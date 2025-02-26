@@ -35,7 +35,7 @@ def label_and_widget(label_text: str, widget: QWidget, *widgets: QWidget, add_st
 
 
 def ctrl_is_pressed():
-    return bool(QApplication.keyboardModifiers() & Qt.ControlModifier)
+    return bool(QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier)
 
 
 @lru_cache(256)
