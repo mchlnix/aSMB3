@@ -1,3 +1,5 @@
 PySide6
 py65
 QDarkStyle
+
+parsimonious
