@@ -83,6 +83,9 @@ class SettingsDialog(QDialog):
         editor_group_layout = QVBoxLayout()
         self._editor_group.setLayout(editor_group_layout)
 
+        self._editor_code_font_input = QLineEdit()
+        self._editor_code_font_input.setText(settings.value(AppSettingKeys.EDITOR_CODE_FONT_NAME))
+
         self._editor_code_font_bold_cb = QCheckBox("Code Font is bold")
         self._editor_code_font_bold_cb.setChecked(settings.value(AppSettingKeys.EDITOR_CODE_FONT_BOLD))
 
@@ -102,6 +105,7 @@ class SettingsDialog(QDialog):
         self._editor_tooltip_max_results_sb.setMinimum(-1)
         (self._editor_tooltip_max_results_sb.setValue(settings.value(AppSettingKeys.EDITOR_TOOLTIP_MAX_RESULTS)))
 
+        editor_group_layout.addLayout(label_and_widget("Editor Font", self._editor_code_font_input))
         editor_group_layout.addWidget(self._editor_code_font_bold_cb)
         editor_group_layout.addLayout(label_and_widget("Code Font Size", self._editor_code_font_size_sb))
         editor_group_layout.addLayout(
@@ -131,6 +135,7 @@ class SettingsDialog(QDialog):
         settings.setValue(AppSettingKeys.ASSEMBLY_COMMAND, self._assembly_command_input.text())
 
         settings.setValue(AppSettingKeys.EDITOR_CODE_FONT_BOLD, self._editor_code_font_bold_cb.isChecked())
+        settings.setValue(AppSettingKeys.EDITOR_CODE_FONT_NAME, self._editor_code_font_input.text())
         settings.setValue(AppSettingKeys.EDITOR_CODE_FONT_SIZE, self._editor_code_font_size_sb.value())
         settings.setValue(AppSettingKeys.EDITOR_REFERENCE_FONT_SIZE, self._editor_reference_font_size_sb.value())
         settings.setValue(AppSettingKeys.EDITOR_SEARCH_FONT_SIZE, self._editor_search_font_size_sb.value())

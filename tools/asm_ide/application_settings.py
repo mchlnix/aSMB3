@@ -1,4 +1,5 @@
 from enum import StrEnum
+from platform import system
 
 from PySide6.QtCore import QSettings
 
@@ -6,6 +7,9 @@ from PySide6.QtCore import QSettings
 class TooltipType(StrEnum):
     DEFAULT = "default"
     REFERENCES = "references"
+
+
+DEFAULT_FONT = "Courier New" if system().lower() == "windows" else "Monospace"
 
 
 class AppSettingKeys(StrEnum):
@@ -18,6 +22,7 @@ class AppSettingKeys(StrEnum):
     ASSEMBLY_NOTIFY_SUCCESS = "assembly_notify_success"
 
     EDITOR_CODE_FONT_BOLD = "editor_code_font_bold"
+    EDITOR_CODE_FONT_NAME = "editor_code_font_name"
     EDITOR_CODE_FONT_SIZE = "editor_code_font_size"
     EDITOR_REFERENCE_FONT_SIZE = "editor_reference_font_size"
     EDITOR_SEARCH_FONT_SIZE = "editor_search_font_size"
@@ -35,6 +40,7 @@ _DEFAULT_VALUES: dict[AppSettingKeys, str | int | bool] = {
     AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS: True,
     #
     AppSettingKeys.EDITOR_CODE_FONT_BOLD: True,
+    AppSettingKeys.EDITOR_CODE_FONT_NAME: DEFAULT_FONT,
     AppSettingKeys.EDITOR_CODE_FONT_SIZE: 14,
     AppSettingKeys.EDITOR_REFERENCE_FONT_SIZE: 12,
     AppSettingKeys.EDITOR_SEARCH_FONT_SIZE: 12,

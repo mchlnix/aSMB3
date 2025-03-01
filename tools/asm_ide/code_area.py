@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QToolTip,
 )
 
-from tools.asm_ide.application_settings import AppSettingKeys, AppSettings
+from tools.asm_ide.application_settings import DEFAULT_FONT, AppSettingKeys, AppSettings
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
 from tools.asm_ide.redirect_popup import RedirectPopup
@@ -60,7 +60,7 @@ class CodeArea(QPlainTextEdit):
         self.text_document.setDocumentLayout(QPlainTextDocumentLayout(self.text_document))
         self.setDocument(self.text_document)
 
-        self._font = QFont("Monospace")
+        self._font = QFont(DEFAULT_FONT)
         self.text_document.setDefaultFont(self._font)
 
         # syntax highlighter
@@ -107,7 +107,11 @@ class CodeArea(QPlainTextEdit):
     def update_from_settings(self):
         settings = AppSettings()
 
-        self._font = QFont("Monospace", settings.value(AppSettingKeys.EDITOR_CODE_FONT_SIZE))
+        self._font = QFont(
+            settings.value(AppSettingKeys.EDITOR_CODE_FONT_NAME),
+            settings.value(AppSettingKeys.EDITOR_CODE_FONT_SIZE),
+        )
+
         self._font.setBold(settings.value(AppSettingKeys.EDITOR_CODE_FONT_BOLD))
         self.text_document.setDefaultFont(self._font)
 
