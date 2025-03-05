@@ -62,7 +62,7 @@ asm_grammar = Grammar(
 
     function_def          = symbol ws ".func" ws expression    
     ram_var_def           = repeating_symbols ws? symbol ":" ws ".ds" ws expression
-    label_def             = ws? symbol ":"
+    label_def             = ws? symbol ":" (ws? instruction_use)?
     local_var_def         = ws? local_symbol ":" ws? everything
     const_def             = symbol ws? "=" ws? expression
 
