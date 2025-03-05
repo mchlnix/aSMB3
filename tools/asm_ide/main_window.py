@@ -179,12 +179,20 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Assembling the code failed", str(ex))
             else:
                 # copy back the compiled ROM
-                shutil.copy((temp_path / "smb3.nes"), self._root_path / "smb3.nes")
+                temp_rom_path = temp_path / "smb3.nes"
 
-                if AppSettings().value(AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
-                    QMessageBox.information(
-                        self, "Assembling finished", "Assembly was successful", QMessageBox.StandardButton.Ok
+                if not temp_rom_path.exists():
+                    QMessageBox.critical(
+                        self, "ROM not found", "Assembly seems to have succeeded, but no ROM file was found."
                     )
+
+                else:
+                    shutil.copy(temp_rom_path, self._root_path / "smb3.nes")
+
+                    if AppSettings().value(AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
+                        QMessageBox.information(
+                            self, "Assembling finished", "Assembly was successful", QMessageBox.StandardButton.Ok
+                        )
 
         self.setCursor(old_cursor)
 
