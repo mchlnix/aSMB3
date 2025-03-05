@@ -53,7 +53,7 @@ class AppSettings(QSettings):
     def __init__(self):
         super(AppSettings, self).__init__("mchlnix", "aSMB3")
 
-    def value(self, key: AppSettingKeys, default_value=None, type_=None):
+    def value(self, key: AppSettingKeys, default_value=None, type_=None) -> str | int | bool | None:
         if key in _DEFAULT_VALUES and type_ is None:
             type_ = type(_DEFAULT_VALUES[key])
 
@@ -78,7 +78,9 @@ def init_settings():
         # fixes wrong default command in versions <0.4
         if key == AppSettingKeys.ASSEMBLY_COMMAND:
             command = settings.value(AppSettingKeys.ASSEMBLY_COMMAND)
-            command = command.replace("%f", "smb3.asm")
+
+            if isinstance(command, str):
+                command = command.replace("%f", "smb3.asm")
 
             settings.setValue(key, command)
 
