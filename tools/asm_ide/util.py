@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Callable, Iterable
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon
@@ -75,6 +76,10 @@ def strip_comment(line: str):
         return line.strip()
 
     return line[:semi_colon_index].strip()
+
+
+def apply(func: Callable, iterable: Iterable, *iterables: Iterable):
+    return list(map(func, iterable, *iterables))
 
 
 DIRECTIVES = [
