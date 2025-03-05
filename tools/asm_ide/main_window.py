@@ -161,13 +161,16 @@ class MainWindow(QMainWindow):
 
             # call the compiler and capture it's output
             try:
-                subprocess.run(
-                    AppSettings().value(AppSettingKeys.ASSEMBLY_COMMAND),
-                    cwd=temp_path,
-                    shell=True,
-                    check=True,
-                    capture_output=True,
-                )
+                assemble_command = AppSettings().value(AppSettingKeys.ASSEMBLY_COMMAND)
+
+                if not isinstance(assemble_command, str):
+                    QMessageBox.critical(
+                        self, "Error", "Assemble Command could not be found. Set it in the Settings Menu."
+                    )
+                    return
+
+                subprocess.run(assemble_command, cwd=temp_path, shell=True, check=True, capture_output=True)
+
             except CalledProcessError as cpe:
                 QMessageBox.critical(
                     self, "Assembling the code failed", f"{cpe.stderr.decode()}\n{cpe.stdout.decode()}"
@@ -252,6 +255,10 @@ class MainWindow(QMainWindow):
         self._global_search_widget.show()
 
     def _update_search_index(self, path_of_changed_file: Path):
+        if self._search_index_threads.activeThreadCount() > 0:
+            # don't allow parallel executions
+            return
+
         parse_call = self._get_populated_parse_call(path_of_changed_file)
 
         self._search_index_threads.start(parse_call)

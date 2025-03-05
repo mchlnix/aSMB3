@@ -20,7 +20,6 @@ class Project:
 
         self._root_path = root_path
 
-        self._tab_widget.clear()
         self._tab_widget.root_path = root_path
 
         if not self._restore_previous_tabs():
@@ -81,3 +80,5 @@ class Project:
         project_settings.set_value(ProjectSettingKeys.OPEN_TAB_INDEX, open_tab_index)
 
         self.is_open = False
+
+        self._tab_widget.clear()
