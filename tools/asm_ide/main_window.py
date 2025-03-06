@@ -277,7 +277,9 @@ class MainWindow(QMainWindow):
         if path_of_changed_file is not None:
             path_of_changed_file = path_of_changed_file.relative_to(self._root_path)
 
-        return self._tab_widget.reference_finder.run_with_local_copies(local_copies, path_of_changed_file)
+        return self._tab_widget.reference_finder.run_with_local_copies(
+            self._root_path / "smb3.asm", local_copies, path_of_changed_file
+        )
 
     def _get_asm_with_local_copies(self):
         """

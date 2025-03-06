@@ -32,6 +32,8 @@ _CONST_REGEX = QRegularExpression(r"([A-Za-z][A-za-z0-9_]*)\s*\=\s*(\$[0-9A-F]+|
 _LABEL_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)\:\s*(.*)")
 _RAM_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)\:\s*(\.ds.*)")
 
+_INCLUDE_REGEX = QRegularExpression(r"\.include \"(.*?)\"")
+
 _CONST_LABEL_CALL_RAM_VAR_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)")
 
 
@@ -42,21 +44,29 @@ class ParserSignals(QObject):
     progress_made = Signal(int, str)
 
 
+class ParseData(NamedTuple):
+    start_file: Path | None = None
+
+    modified_data: dict[Path, str] = {}
+    """
+    Holds a Path and the data that Path points to. Could be the file data on disk or the (perhaps) modified data of
+    the opened file in the editor.
+    This allows finding definitions and references, that are not yet saved to disk.
+    """
+
+    currently_open_file: Path | None = None
+    """
+    When documents are modified, but not saved yet, we have to use the local copies, instead of the files on disk.
+    """
+
+    found_files: list[Path] = []
+
+
 class ReferenceFinder(QRunnable):
     def __init__(self):
         super().__init__()
 
-        self._path_to_data: dict[Path, str] = {}
-        """
-        Holds a Path and the data that Path points to. Could be the file data on disk or the (perhaps) modified data of
-        the opened file in the editor.
-        This allows finding definitions and references, that are not yet saved to disk.
-        """
-
-        self._currently_open_file: Path | None = None
-        """
-        When documents are modified, but not saved yet, we have to use the local copies, instead of the files on disk.
-        """
+        self._parse_data = ParseData()
 
         self.definitions: dict[str, ReferenceDefinition] = {}
         self._definitions: dict[str, ReferenceDefinition] = {}
@@ -72,23 +82,26 @@ class ReferenceFinder(QRunnable):
         self.definitions.clear()
         self.name_to_references.clear()
 
-        self._path_to_data.clear()
-        self._currently_open_file = None
+        self._parse_data = ParseData()
 
-    def run_with_local_copies(self, files: dict[Path, str], currently_open_file: Path | None = None):
-        self._path_to_data = files
-        self._currently_open_file = currently_open_file
+    def run_with_local_copies(self, start_file: Path, files: dict[Path, str], currently_open_file: Path | None = None):
+        self._parse_data = ParseData(start_file, files, currently_open_file)
 
         return self.run
 
     def run(self):
         start_time = time.time()
 
-        do_a_complete_parse = self._currently_open_file is None
+        if self._parse_data.start_file is None:
+            return
 
-        # smb3.asm twice, all the prg files twice and then cleaning up the references once
+        self._find_all_files()
+
+        do_a_complete_parse = self._parse_data.currently_open_file is None
+
+        # all the asm files twice and then cleaning up the references once
         # this is only for a progress dialog, where we always do a complete parse
-        self.signals.maximum_found.emit(len(self._path_to_data) * 2 + 1)
+        self.signals.maximum_found.emit(len(self._parse_data.found_files) * 2 + 1)
 
         # Pass 1, get all the definitions
         if do_a_complete_parse:
@@ -108,17 +121,16 @@ class ReferenceFinder(QRunnable):
         self.definitions = self._definitions.copy()
         self.name_to_references = self._name_to_references.copy()
 
-        self._path_to_data.clear()
-
+        self._parse_data = ParseData()
         print(f"Parsing took {round(time.time() - start_time, 2)} seconds")
 
     def _parse_current_file_for_definitions(self):
         self._definitions = self.definitions.copy()
         self._name_to_references = self.name_to_references.copy()
 
-        if self._currently_open_file is not None:
-            self._remove_all_definitions_of_file(self._currently_open_file)
-            self._parse_file_for_definitions(self._currently_open_file)
+        if self._parse_data.currently_open_file is not None:
+            self._remove_all_definitions_of_file(self._parse_data.currently_open_file)
+            self._parse_file_for_definitions(self._parse_data.currently_open_file)
 
         old_definitions = set(self.definitions.keys())
         new_definitions = set(self._definitions.keys())
@@ -137,7 +149,7 @@ class ReferenceFinder(QRunnable):
         self._definitions.clear()
         self._name_to_references.clear()
 
-        for file_path in self._path_to_data:
+        for file_path in self._parse_data.found_files:
             self.signals.progress_made.emit(progress, f"Parsing for Definitions: {file_path}")
             self._parse_file_for_definitions(file_path)
             progress += 1
@@ -150,7 +162,7 @@ class ReferenceFinder(QRunnable):
                 self._definitions.pop(name)
 
     def _parse_file_for_definitions(self, file_path: Path):
-        lines = self._path_to_data[file_path].splitlines(True)
+        lines = self._data_for_file(file_path).splitlines(True)
 
         for line_no, line in enumerate(lines, 1):
             self._find_definitions_in_line(line, line_no, file_path)
@@ -180,7 +192,7 @@ class ReferenceFinder(QRunnable):
                 return
 
     def _parse_all_files_for_references(self, added_definitions, do_a_complete_parse, progress):
-        for file_path in self._path_to_data:
+        for file_path in self._parse_data.found_files:
             self.signals.progress_made.emit(progress, f"Parsing for References: {file_path}")
 
             self._parse_file_for_references(file_path, added_definitions, do_a_complete_parse)
@@ -188,9 +200,9 @@ class ReferenceFinder(QRunnable):
         return progress
 
     def _parse_file_for_references(self, file_to_parse: Path, added_definitions: list[str], force_parse):
-        data = self._path_to_data[file_to_parse]
+        data = self._data_for_file(file_to_parse)
 
-        is_open_file = file_to_parse == self._currently_open_file
+        is_open_file = file_to_parse == self._parse_data.currently_open_file
 
         if not (force_parse or is_open_file) and not any(value in data for value in added_definitions):
             return
@@ -236,3 +248,52 @@ class ReferenceFinder(QRunnable):
                 for reference in list(self._name_to_references[name]):
                     if reference.origin_file == file_path and reference.origin_line_no == line_no:
                         self._name_to_references[name].remove(reference)
+
+    def _find_all_files(self):
+        self._parse_data.found_files.clear()
+
+        if self._parse_data.start_file is None:
+            return
+
+        self._parse_data.found_files.append(self._parse_data.start_file)
+
+        root_path = self._parse_data.start_file.parent
+
+        index = 0
+
+        while index < len(self._parse_data.found_files):
+            next_to_parse = self._parse_data.found_files[index]
+
+            new_files = self._find_files_in_file(root_path, next_to_parse)
+
+            self._parse_data.found_files.extend(
+                [file for file in new_files if file not in self._parse_data.found_files]
+            )
+
+            index += 1
+
+    @staticmethod
+    def _find_files_in_file(root_path: Path, file: Path):
+        for line in file.read_text().splitlines():
+            if ".include" not in line:
+                continue
+
+            match_iterator = _INCLUDE_REGEX.globalMatch(line)
+            if not match_iterator.hasNext():
+                continue
+            match = match_iterator.next()
+
+            new_file = match.capturedView(1)
+
+            if not new_file.endswith(".asm"):
+                new_file += ".asm"
+
+            yield root_path / new_file
+
+    def _data_for_file(self, file_to_parse: Path):
+        if file_to_parse in self._parse_data.modified_data:
+            data = self._parse_data.modified_data[file_to_parse]
+        else:
+            data = file_to_parse.read_text()
+
+        return data
