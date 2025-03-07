@@ -246,7 +246,7 @@ class MainWindow(QMainWindow):
 
         search_term = current_code_area.textCursor().selectedText()
 
-        data_by_file = self._get_asm_with_local_copies()
+        data_by_file = self._get_asm_with_local_copies(all_files=True)
 
         self._global_search_widget = GlobalSearchPopup(current_code_area, search_term, data_by_file)
         self._global_search_widget.search_result_clicked.connect(self.follow_redirect)
@@ -281,28 +281,31 @@ class MainWindow(QMainWindow):
             self._root_path / "smb3.asm", local_copies, path_of_changed_file
         )
 
-    def _get_asm_with_local_copies(self):
+    def _get_asm_with_local_copies(self, all_files=False):
         """
-        Returns a dictionary whose keys are relative Paths to the PRG and smb3.asm file, and the values are the current
+        Returns a dictionary whose keys are relative Paths to the referenced .asm files, and the values are the current
         contents of these files.
-        Either from disk or from the open code area.
+
+        If "all_files" is False, the dictionary contains paths to the currently open files and their (perhaps modified)
+        content.
+        If "all_files" is True, the dictionary also includes all the other files with their contents read from the disk.
         """
-        # todo only parse the PRG files mentioned in smb3.asm?
         asm: dict[Path, str] = dict()
 
-        for asm_path in [self._root_path / "smb3.asm"] + self.prg_files:
-            if asm_path in self._tab_widget.tab_index_to_path:
-                tab_index = self._tab_widget.tab_index_to_path.index(asm_path)
-
-                code_area = self._tab_widget.widget(tab_index)
-
-                if code_area is None:
-                    continue
-
-                asm[asm_path.relative_to(self._root_path)] = code_area.text_document.toPlainText()
-
-            else:
+        if all_files:
+            for asm_path in self._reference_finder.found_files:
                 asm[asm_path.relative_to(self._root_path)] = asm_path.read_text()
+
+        for tab_index, asm_path in enumerate(self._tab_widget.tab_index_to_path):
+            code_area = self._tab_widget.widget(tab_index)
+
+            if code_area is None:
+                continue
+
+            if not code_area.text_document.isModified():
+                continue
+
+            asm[asm_path.relative_to(self._root_path)] = code_area.text_document.toPlainText()
 
         return asm
 

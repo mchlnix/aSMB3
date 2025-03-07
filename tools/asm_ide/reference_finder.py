@@ -84,6 +84,10 @@ class ReferenceFinder(QRunnable):
 
         self._parse_data = ParseData()
 
+    @property
+    def found_files(self) -> list[Path]:
+        return self._parse_data.found_files
+
     def run_with_local_copies(self, start_file: Path, files: dict[Path, str], currently_open_file: Path | None = None):
         self._parse_data = ParseData(start_file, files, currently_open_file)
 
@@ -93,6 +97,7 @@ class ReferenceFinder(QRunnable):
         start_time = time.time()
 
         if self._parse_data.start_file is None:
+            print("Not running. No start file.")
             return
 
         self._find_all_files()
@@ -121,7 +126,6 @@ class ReferenceFinder(QRunnable):
         self.definitions = self._definitions.copy()
         self.name_to_references = self._name_to_references.copy()
 
-        self._parse_data = ParseData()
         print(f"Parsing took {round(time.time() - start_time, 2)} seconds")
 
     def _parse_current_file_for_definitions(self):
