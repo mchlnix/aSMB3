@@ -252,6 +252,7 @@ class ReferenceFinder(QRunnable):
 
     def _cleanup_references(self):
         """Remove the location of the name definition from the list of references."""
+        # TODO should remove references, that don't have a definition
         for name, definition in self.definitions.items():
             _, _, file_path, line_no, _, _ = definition
 

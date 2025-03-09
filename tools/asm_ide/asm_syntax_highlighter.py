@@ -48,6 +48,10 @@ _CLICKABLE_RAM_VAR_COLOR = QTextCharFormat()
 _CLICKABLE_RAM_VAR_COLOR.setForeground(_RAM_VARIABLE_COLOR)
 _CLICKABLE_RAM_VAR_COLOR.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline)
 
+_ERROR_FORMAT = QTextCharFormat()
+_ERROR_FORMAT.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
+_ERROR_FORMAT.setUnderlineColor(QColor.fromRgb(255, 0, 0))
+
 _REGEXPS = [
     _DEC_NUMBER_REGEX,
     _HEX_NUMBER_REGEX,
@@ -86,9 +90,10 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
         self._reference_finder = reference_finder
 
         self.reference_under_cursor: ReferenceDefinition | None = None
+        self.current_error_start = -1
 
-    def highlightBlock(self, line: str, clickable=False):
-        self.setFormat(0, len(line) - 1, _DEFAULT_TEXT_COLOR)
+    def highlightBlock(self, line: str):
+        self.setFormat(0, len(line), _DEFAULT_TEXT_COLOR)
 
         self._format_instructions_in_line(line)
         self._format_directives_in_line(line)
@@ -115,6 +120,9 @@ class AsmSyntaxHighlighter(QSyntaxHighlighter):
                     continue
 
                 self.setFormat(capture_start, capture_length, _REF_TYPE_TO_COLOR[ref_type])
+
+        if self.currentBlock().position() == self.current_error_start:
+            self.setFormat(0, len(line), _ERROR_FORMAT)
 
     def _format_instructions_in_line(self, line):
         if not is_instruction(line):

@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, Qt, QTimer, Signal, SignalInstance
+from parsimonious.exceptions import IncompleteParseError
+from PySide6.QtCore import QPoint, Qt, QThreadPool, QTimer, Signal, SignalInstance
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from tools.asm_ide.application_settings import DEFAULT_FONT, AppSettingKeys, AppSettings
+from tools.asm_ide.asm_grammar import NES_ASM_GRAMMAR
 from tools.asm_ide.asm_syntax_highlighter import AsmSyntaxHighlighter
 from tools.asm_ide.line_number_area import LineNumberArea
 from tools.asm_ide.redirect_popup import RedirectPopup
@@ -88,6 +90,8 @@ class CodeArea(QPlainTextEdit):
 
         self._current_search_cursor: QTextCursor = QTextCursor()
 
+        self._check_grammar_threads = QThreadPool(maxThreadCount=1)
+
         self._text_change_delay_timer = QTimer(self)
         """
         A QTimer, that is connected to the different CodeArea objects. Whenever their text changes, this timer will be
@@ -97,6 +101,7 @@ class CodeArea(QPlainTextEdit):
         """
         self._text_change_delay_timer.setSingleShot(True)
         self._text_change_delay_timer.timeout.connect(self.contents_changed.emit)
+        self._text_change_delay_timer.timeout.connect(self._start_grammar_check)
 
         self.document().contentsChange.connect(self._maybe_trigger_timer)
 
@@ -130,6 +135,38 @@ class CodeArea(QPlainTextEdit):
             return
 
         self._text_change_delay_timer.start()
+
+    def _start_grammar_check(self):
+        if self._check_grammar_threads.activeThreadCount() > 0:
+            # don't allow parallel executions
+            return
+
+        self._check_grammar_threads.start(self._check_against_grammar)
+
+    def _check_against_grammar(self):
+        try:
+            NES_ASM_GRAMMAR.parse(self.text_document.toPlainText())
+        except IncompleteParseError as ipe:
+            start_of_fail = ipe.pos
+
+            text_cursor = self.textCursor()
+            text_cursor.setPosition(start_of_fail)
+            text_cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
+
+            self.syntax_highlighter.current_error_start = text_cursor.position()
+            self.syntax_highlighter.rehighlightBlock(text_cursor.block())
+
+            print(f"error at {text_cursor.position()}")
+            return
+
+        self.text_document.findBlock(self.syntax_highlighter.current_error_start)
+
+        if self.syntax_highlighter.current_error_start != -1:
+            block = self.text_document.findBlock(self.syntax_highlighter.current_error_start)
+            self.syntax_highlighter.current_error_start = -1
+            self.syntax_highlighter.rehighlightBlock(block)
+        else:
+            self.syntax_highlighter.current_error_start = -1
 
     def focus_search_bar(self):
         self._search_bar.setFocus()

@@ -12,7 +12,8 @@ def _wrap_in_quotes(text: str) -> str:
 
 QUOTED_DIRECTIVES = apply(_wrap_in_quotes, DIRECTIVES)
 QUOTED_INSTRUCTIONS = apply(_wrap_in_quotes, INSTRUCTIONS)
-asm_grammar = Grammar(
+
+NES_ASM_GRAMMAR = Grammar(
     f"""
     program               = (line / empty_line / comment_line)*
 
@@ -114,11 +115,11 @@ if __name__ == "__main__":
     path = Path("/home/michael/Gits/smb3/smb3.asm")
 
     print(path)
-    asm_grammar.parse(path.read_text())
+    NES_ASM_GRAMMAR.parse(path.read_text())
 
     for i in range(32):
         path = Path(f"/home/michael/Gits/smb3/PRG/prg{i:0>3}.asm")
         print(path)
-        asm_grammar.parse(path.read_text())
+        NES_ASM_GRAMMAR.parse(path.read_text())
 
     print(time() - start)
