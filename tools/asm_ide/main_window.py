@@ -32,7 +32,7 @@ from tools.asm_ide.tab_widget import TabWidget
 
 
 def _get_main_assembly_file() -> Path | None:
-    main_assembly_file = QFileDialog.getOpenFileName(None, "Select Main Assembly File")
+    main_assembly_file, file_pattern = QFileDialog.getOpenFileName(None, "Select Main Assembly File")
 
     if not main_assembly_file:
         return None
