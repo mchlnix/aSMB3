@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QKeyEvent
 from PySide6.QtWidgets import (
@@ -9,15 +7,8 @@ from PySide6.QtWidgets import (
 )
 
 from tools.asm_ide.application_settings import AppSettingKeys, AppSettings
-from tools.asm_ide.reference_finder import ReferenceDefinition, ReferenceType
+from tools.asm_ide.reference_finder import ReferenceDefinition
 from tools.asm_ide.table_widget import TableWidget
-
-
-def _smb3_first_sort_key(reference: ReferenceDefinition):
-    if reference.origin_file.name == "smb3.asm":
-        return ReferenceDefinition("", "", Path("a"), 0, ReferenceType.UNSET, "")
-    else:
-        return reference
 
 
 class RedirectPopup(QWidget):
@@ -73,7 +64,7 @@ class ReferenceTableWidget(TableWidget):
         self.setColumnCount(3)
 
         self._add_definition_row(definition)
-        self._add_reference_rows(references)
+        self._add_reference_rows(references, definition)
 
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
@@ -101,14 +92,17 @@ class ReferenceTableWidget(TableWidget):
 
         self._select_row(1)
 
-    def _add_reference_rows(self, references):
+    def _add_reference_rows(self, references: list[ReferenceDefinition], definition: ReferenceDefinition):
         if not references:
             return
 
         assert self._next_row_index == self._REFERENCE_LABEL_ROW
         self._add_label_row("References:")
 
-        for reference in sorted(references, key=_smb3_first_sort_key):
+        for reference in sorted(references):
+            if reference == definition:
+                continue
+
             file_item = self._make_file_path_item(reference.origin_file)
             line_number_item = self._make_line_number_item(reference.origin_line_no)
             line_item = self._make_line_item(reference.line)

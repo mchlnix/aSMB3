@@ -27,6 +27,13 @@ class ReferenceDefinition(NamedTuple):
     type: ReferenceType
     line: str
 
+    def __eq__(self, other):
+        return (
+            self.name == other.name
+            and self.origin_file == other.origin_file
+            and self.origin_line_no == other.origin_line_no
+        )
+
 
 _CONST_REGEX = QRegularExpression(r"([A-Za-z][A-za-z0-9_]*)\s*\=\s*(\$[0-9A-F]+|\%[0-1]+|[0-9]+)")
 _LABEL_REGEX = QRegularExpression(r"([A-Za-z_][A-Za-z0-9_]*)\:\s*(.*)")
