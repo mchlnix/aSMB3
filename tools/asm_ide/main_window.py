@@ -31,23 +31,13 @@ from tools.asm_ide.settings_dialog import SettingsDialog
 from tools.asm_ide.tab_widget import TabWidget
 
 
-def _get_disassembly_root() -> Path | None:
-    dis_asm_folder = QFileDialog.getExistingDirectory(None, "Select Disassembly Directory")
+def _get_main_assembly_file() -> Path | None:
+    main_assembly_file = QFileDialog.getOpenFileName(None, "Select Main Assembly File")
 
-    if not dis_asm_folder:
+    if not main_assembly_file:
         return None
 
-    return Path(dis_asm_folder)
-
-
-def _root_path_is_valid(root_path: Path):
-    if not (root_path / "smb3.asm").exists():
-        QMessageBox.critical(
-            None, "Invalid Disassembly Directory", "The directory you selected did not contain an 'smb3.asm' file."
-        )
-        return False
-
-    return True
+    return Path(main_assembly_file)
 
 
 class MainWindow(QMainWindow):
@@ -146,6 +136,10 @@ class MainWindow(QMainWindow):
 
         self._tab_widget.update_from_settings()
 
+    @property
+    def _root_path(self):
+        return self._main_file_path.parent
+
     def _assemble_rom(self):
         old_cursor = self.cursor()
         self.setCursor(Qt.CursorShape.BusyCursor)
@@ -230,12 +224,6 @@ class MainWindow(QMainWindow):
     def sizeHint(self):
         return QSize(1800, 1600)
 
-    @property
-    def prg_files(self) -> list[Path]:
-        prg_dir = self._root_path / "PRG"
-
-        return sorted(prg_dir.glob("prg[0-9]*.asm"))
-
     def _start_global_search(self):
         current_code_area = self._tab_widget.currentWidget()
 
@@ -278,7 +266,7 @@ class MainWindow(QMainWindow):
             path_of_changed_file = path_of_changed_file.relative_to(self._root_path)
 
         return self._tab_widget.reference_finder.run_with_local_copies(
-            self._root_path / "smb3.asm", local_copies, path_of_changed_file
+            self._main_file_path, local_copies, path_of_changed_file
         )
 
     def _get_asm_with_local_copies(self, all_files=False):
@@ -314,21 +302,21 @@ class MainWindow(QMainWindow):
             return False
 
         if path is None:
-            path = _get_disassembly_root()
+            path = _get_main_assembly_file()
 
-        if path is None or not _root_path_is_valid(path):
-            return False
+        if path is None:
+            return
 
         self._project.close()
 
-        self._root_path = path
+        self._main_file_path = path
 
         self._parse_with_progress_dialog()
 
         self._file_tree_view.set_root_path(self._root_path)
-        self.setWindowTitle(f"ASMB3 IDE - {self._root_path}")
+        self.setWindowTitle(f"ASMB3 IDE - {self._main_file_path}")
 
-        self._project.open(self._root_path)
+        self._project.open(self._main_file_path)
 
         return True
 

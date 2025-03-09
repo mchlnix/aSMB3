@@ -12,18 +12,18 @@ class Project:
 
         self.is_open = False
 
-    def open(self, root_path: Path):
+    def open(self, main_file_path: Path):
         if self.is_open:
             raise ValueError(f"Project was already open for '{self._root_path}'")
 
         self.is_open = True
 
-        self._root_path = root_path
+        self._root_path = main_file_path.parent
 
-        self._tab_widget.root_path = root_path
+        self._tab_widget.root_path = self._root_path
 
         if not self._restore_previous_tabs():
-            self._tab_widget.open_or_switch_file(self._root_path / "smb3.asm")
+            self._tab_widget.open_or_switch_file(main_file_path)
 
         if code_area := self._tab_widget.currentWidget():
             code_area.setFocus()

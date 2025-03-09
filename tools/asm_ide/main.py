@@ -15,10 +15,13 @@ if __name__ == "__main__":
 
         init_settings()
 
+        path_arg: Path | None = None
+
         if len(sys.argv) > 1:
-            path_arg: Path | None = Path(sys.argv[1])
-        else:
-            path_arg = None
+            path_arg = Path(sys.argv[1])
+
+            if not path_arg.is_file():
+                raise ValueError(f"Argument given over command line was not a file. Was '{path_arg}'")
 
         main_window = MainWindow(path_arg)
         main_window.show()
