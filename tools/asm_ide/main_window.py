@@ -130,7 +130,7 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
 
     def _on_settings(self):
-        settings_dialog = SettingsDialog(self)
+        settings_dialog = SettingsDialog(self, self._main_file_path)
 
         settings_dialog.exec()
 
@@ -162,6 +162,8 @@ class MainWindow(QMainWindow):
                         self, "Error", "Assemble Command could not be found. Set it in the Settings Menu."
                     )
                     return
+
+                assemble_command = assemble_command.replace("%f", self._main_file_path.name)
 
                 subprocess.run(assemble_command, cwd=temp_path, shell=True, check=True, capture_output=True)
 

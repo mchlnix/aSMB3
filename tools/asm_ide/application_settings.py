@@ -36,7 +36,7 @@ _DEFAULT_VALUES: dict[AppSettingKeys, str | int | bool] = {
     AppSettingKeys.APP_SAVE_AUTOMATICALLY: False,
     AppSettingKeys.APP_START_MAXIMIZED: False,
     #
-    AppSettingKeys.ASSEMBLY_COMMAND: "nesasm.exe smb3.asm",
+    AppSettingKeys.ASSEMBLY_COMMAND: "nesasm.exe %f",
     AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS: True,
     #
     AppSettingKeys.EDITOR_CODE_FONT_BOLD: True,
@@ -74,15 +74,6 @@ def init_settings():
     settings = AppSettings()
 
     for key in AppSettingKeys:
-
-        # fixes wrong default command in versions <0.4
-        if key == AppSettingKeys.ASSEMBLY_COMMAND:
-            command = settings.value(AppSettingKeys.ASSEMBLY_COMMAND)
-
-            if isinstance(command, str):
-                command = command.replace("%f", "smb3.asm")
-
-            settings.setValue(key, command)
 
         if settings.contains(key):
             continue

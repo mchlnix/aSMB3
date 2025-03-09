@@ -1,9 +1,11 @@
+from pathlib import Path
+
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QDialog,
     QGroupBox,
+    QLabel,
     QLineEdit,
     QSpinBox,
     QVBoxLayout,
@@ -14,7 +16,7 @@ from tools.asm_ide.util import label_and_widget
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent, main_file_path: Path):
         super(SettingsDialog, self).__init__(parent)
 
         settings = AppSettings()
@@ -69,10 +71,13 @@ class SettingsDialog(QDialog):
         self._assembly_command_input.setPlaceholderText(settings.value(AppSettingKeys.ASSEMBLY_COMMAND))
         self._assembly_command_input.setText(settings.value(AppSettingKeys.ASSEMBLY_COMMAND))
 
+        command_explanation_label = QLabel(f"%f becomes '{main_file_path.name}' when the command is executed")
+
         assembly_group_layout.addWidget(self._assembly_notify_success_cb)
         assembly_group_layout.addLayout(
             label_and_widget("Assembler command", self._assembly_command_input, add_stretch=False)
         )
+        assembly_group_layout.addWidget(command_explanation_label)
 
         self.layout().addWidget(self._assembly_group)
 
@@ -142,15 +147,3 @@ class SettingsDialog(QDialog):
         settings.setValue(AppSettingKeys.EDITOR_TOOLTIP_MAX_RESULTS, self._editor_tooltip_max_results_sb.value())
 
         settings.sync()
-
-
-if __name__ == "__main__":
-    import sys
-
-    app = QApplication(sys.argv)
-
-    settings_dialog = SettingsDialog()
-
-    settings_dialog.show()
-
-    sys.exit(app.exec())
