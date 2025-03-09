@@ -153,6 +153,9 @@ class MainWindow(QMainWindow):
             # copy currently open files
             self._write_modified_source_into_temp_dir(temp_path)
 
+            # todo: just copy all files that have changed after assembly succeeded?
+            rom_name = self._main_file_path.stem + ".nes"
+
             # call the compiler and capture it's output
             try:
                 assemble_command = AppSettings().value(AppSettingKeys.ASSEMBLY_COMMAND)
@@ -175,7 +178,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Assembling the code failed", str(ex))
             else:
                 # copy back the compiled ROM
-                temp_rom_path = temp_path / "smb3.nes"
+                temp_rom_path = temp_path / rom_name
 
                 if not temp_rom_path.exists():
                     QMessageBox.critical(
@@ -183,7 +186,7 @@ class MainWindow(QMainWindow):
                     )
 
                 else:
-                    shutil.copy(temp_rom_path, self._root_path / "smb3.nes")
+                    shutil.copy(temp_rom_path, self._root_path / rom_name)
 
                     if AppSettings().value(AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
                         QMessageBox.information(
