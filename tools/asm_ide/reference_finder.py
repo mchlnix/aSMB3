@@ -300,7 +300,10 @@ class ReferenceFinder(QRunnable):
             if not new_file.endswith(".asm"):
                 new_file += ".asm"
 
-            yield root_path / new_file
+            found_path = root_path / new_file
+
+            if found_path.is_file():
+                yield found_path
 
     def _data_for_file(self, file_to_parse: Path):
         if file_to_parse in self._parse_data.modified_data:
