@@ -1,10 +1,13 @@
+from functools import partial
 from pathlib import Path
 from typing import Generator
 
-from PySide6.QtCore import Signal, SignalInstance
+from parsimonious import IncompleteParseError
+from PySide6.QtCore import Qt, QThreadPool, Signal, SignalInstance
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QMessageBox, QTabWidget
 
+from tools.asm_ide.asm_grammar import NES_ASM_GRAMMAR
 from tools.asm_ide.code_area import CodeArea
 from tools.asm_ide.project_settings import ProjectSettingKeys, ProjectSettings
 from tools.asm_ide.reference_finder import ReferenceFinder
@@ -54,6 +57,10 @@ class TabWidget(QTabWidget):
 
         self.reference_finder: ReferenceFinder = reference_finder
 
+        self._grammar_check_threads = QThreadPool()
+        self._grammar_check_threads.setMaxThreadCount(2)
+        """When opening a lot of files, they all need to be checked, so limit this to 2 at a time."""
+
         tab_bar = TabBar(self)
         tab_bar.middle_click_on.connect(self.tabCloseRequested.emit)
         self.setTabBar(tab_bar)
@@ -86,6 +93,7 @@ class TabWidget(QTabWidget):
         code_area = CodeArea(self, self.reference_finder)
         code_area.redirect_clicked.connect(self.redirect_clicked.emit)
         code_area.contents_changed.connect(lambda: self.contents_changed.emit(abs_path))
+        code_area.contents_changed.connect(self._start_grammar_check)
 
         self.tab_index_to_path.append(abs_path)
 
@@ -110,6 +118,45 @@ class TabWidget(QTabWidget):
 
         self._restore_highlighted_line_numbers(abs_path, code_area)
         self.restore_position_for_tab(abs_path)
+
+    def _start_grammar_check(self):
+        self._grammar_check_threads.start(partial(self._check_against_grammar, self.sender()))
+
+    def _check_against_grammar(self, code_area: CodeArea):
+        # This could be in the CodeArea object, but we want to pool all those calls in a joint thread pool
+
+        self.setCursor(Qt.CursorShape.BusyCursor)
+
+        try:
+            NES_ASM_GRAMMAR.parse(code_area.text_document.toPlainText())
+
+        except IncompleteParseError as ipe:
+            start_of_fail = ipe.pos
+
+            text_cursor = code_area.textCursor()
+            text_cursor.setPosition(start_of_fail)
+            text_cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
+
+            code_area.syntax_highlighter.current_error_start = text_cursor.position()
+            code_area.syntax_highlighter.rehighlightBlock(text_cursor.block())
+
+            line_number = text_cursor.blockNumber() + 1
+
+            code_area.line_number_area.error_line_no = line_number
+            return
+
+        else:
+            if code_area.syntax_highlighter.current_error_start != -1:
+                block = code_area.text_document.findBlock(code_area.syntax_highlighter.current_error_start)
+                code_area.syntax_highlighter.current_error_start = -1
+                code_area.syntax_highlighter.rehighlightBlock(block)
+
+                code_area.line_number_area.error_line_no = -1
+        finally:
+            code_area.line_number_area.repaint()
+
+            if self._grammar_check_threads.activeThreadCount() == 1:
+                self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def restore_position_for_tab(self, abs_path: Path):
 

@@ -46,8 +46,8 @@ class MainWindow(QMainWindow):
 
         self.setMouseTracking(True)
 
-        self._search_index_threads = QThreadPool()
-        self._search_index_threads.setMaxThreadCount(1)
+        self._search_index_threads = QThreadPool(maxThreadCount=1)
+        """Use the max count of the ThreadPool to enforce only one index process running at a time."""
 
         self._global_search_widget: GlobalSearchPopup | None = None
 
