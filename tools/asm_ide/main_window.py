@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
 
     def _set_up_toolbars(self):
         self._set_up_menu_toolbar()
-        toolbar = QToolBar()
+        toolbar = QToolBar("File Tree Sidebar")
         toolbar.setMovable(False)
 
         self._file_tree_view = AsmFileTreeView()

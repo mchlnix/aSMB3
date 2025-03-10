@@ -14,7 +14,6 @@ class AsmFileTreeView(QTreeView):
 
         self._root_path = Path()
 
-        self.setWindowTitle("File Tree Sidebar")
         self.doubleClicked.connect(self.on_file_clicked)
 
     def set_root_path(self, root_path: Path):
