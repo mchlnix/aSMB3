@@ -51,7 +51,7 @@ NES_ASM_GRAMMAR = Grammar(
 
     macro_def             = macro_start (macro_body+ / if_clause) macro_end
     macro_start           = ws? symbol ":"? ws ".macro" comment? newline
-    macro_body            = !macro_end ws? (dot_byte / dot_ds / macro_instruction_use) comment? newline
+    macro_body            = !macro_end !macro_start ws? (dot_byte / dot_word / dot_ds / macro_instruction_use) comment? newline
     macro_parameter       = "\\\\" dec_digit
     macro_instruction_use = (instruction ws macro_parameter) / instruction_use
     macro_end             = ws? (".endm" / ".ENDM")
@@ -84,7 +84,7 @@ NES_ASM_GRAMMAR = Grammar(
     symbol                = global_symbol / local_symbol
 
     global_symbol         = ~"[A-Za-z_][A-Za-z0-9_]*"
-    local_symbol          = "." global_symbol
+    local_symbol          = !directive "." global_symbol
 
     literal               = string_literal / number_literal
 
