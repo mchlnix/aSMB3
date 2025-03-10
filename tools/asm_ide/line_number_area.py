@@ -12,6 +12,7 @@ if typing.TYPE_CHECKING:
 
 
 _LINE_NO_COLOR = QColor.fromRgb(0x2C91AF)
+_ERROR_BG_COLOR = QColor.fromRgb(0xFF0000)
 
 
 class LineNumberArea(QWidget):
@@ -28,6 +29,7 @@ class LineNumberArea(QWidget):
         self._line_no_width = self._line_no_height = 1
 
         self.lines_to_highlight: list[int] = []
+        self.error_line_no: int = -1
 
     def update_text_measurements(self):
         font_metrics = QFontMetrics(self.editor.document().defaultFont())
@@ -70,32 +72,101 @@ class LineNumberArea(QWidget):
 
         rect = QRect(self.MARGIN_LEFT, top, self._line_no_width, bottom)
 
-        while block.isValid() and block.isVisible():
-            line_number = block.blockNumber() + 1
-            line_no_str = str(line_number)
+        for line_number in self._lines_to_draw():
 
-            if line_number in self.lines_to_highlight:
-                painter.save()
+            if line_number == self.error_line_no:
+                self._draw_error_line_number(painter, rect, line_number)
 
-                painter.setPen(QColor(255, 255, 255))
-                painter.setBrush(_LINE_NO_COLOR)
-
-                painter.fillRect(rect, painter.brush())
-                painter.drawText(rect, Qt.AlignmentFlag.AlignBaseline | Qt.AlignmentFlag.AlignRight, line_no_str)
-
-                painter.restore()
+            elif line_number in self.lines_to_highlight:
+                self._draw_highlighted_line_number(painter, rect, line_number)
 
             else:
-                painter.drawText(rect, Qt.AlignmentFlag.AlignBaseline | Qt.AlignmentFlag.AlignRight, line_no_str)
+                self._draw_line_number(painter, rect, line_number)
 
             rect.adjust(0, self._line_no_height + 1, 0, self._line_no_height + 1)
 
-            block = block.next()
+        self._draw_error_arrow(painter)
 
+        self._draw_vertical_line(painter)
+
+        painter.end()
+
+    def _draw_error_arrow(self, painter: QPainter):
+        visible_line_numbers = self._lines_to_draw()
+
+        if self.error_line_no in visible_line_numbers + [-1]:
+            return
+
+        min_no = min(visible_line_numbers)
+
+        painter.save()
+        painter.setBrush(QColor(255, 0, 0))
+
+        arrow_width = 15
+        arrow_height = 15
+
+        if self.error_line_no < min_no:
+            left = QPoint((self.width() - arrow_width) // 2, arrow_height)
+            right = QPoint((self.width() + arrow_width) // 2, arrow_height)
+            top = QPoint(self.width() // 2, 0)
+        else:
+            base_y = self.editor.viewport().height()
+
+            if self.editor.horizontalScrollBar().isVisible():
+                base_y -= self.editor.horizontalScrollBar().height()
+
+            left = QPoint((self.width() - arrow_width) // 2, base_y - arrow_height)
+            right = QPoint((self.width() + arrow_width) // 2, base_y - arrow_height)
+            top = QPoint(self.width() // 2, base_y)
+
+        painter.drawPolygon([left, right, top])
+
+        painter.restore()
+
+    def _draw_vertical_line(self, painter):
         painter.setPen(QColor(150, 150, 150))
         painter.drawLine(QPoint(self.sizeHint().width() - 1, 0), QPoint(self.sizeHint().width() - 1, self.height()))
 
-        painter.end()
+    @staticmethod
+    def _draw_line_number(painter, rect, line_number):
+        line_no_str = str(line_number)
+
+        painter.drawText(rect, Qt.AlignmentFlag.AlignBaseline | Qt.AlignmentFlag.AlignRight, line_no_str)
+
+    def _draw_error_line_number(self, painter, rect, line_number):
+        self._draw_line_number_with_background(painter, rect, line_number, _ERROR_BG_COLOR)
+
+    def _draw_highlighted_line_number(self, painter, rect, line_number):
+        self._draw_line_number_with_background(line_number, painter, rect, _LINE_NO_COLOR)
+
+    def _draw_line_number_with_background(self, painter, rect, line_number, bg_color: QColor):
+        painter.save()
+
+        painter.setPen(QColor(255, 255, 255))
+        painter.setBrush(bg_color)
+        painter.fillRect(rect, painter.brush())
+
+        self._draw_line_number(painter, rect, line_number)
+
+        painter.restore()
+
+    def _lines_to_draw(self):
+        line_nos: list[int] = []
+
+        block = self.editor.firstVisibleBlock()
+
+        while block.isValid():
+            top = self.editor.blockBoundingGeometry(block).translated(self.editor.contentOffset()).top() + 1
+
+            if top > self.editor.viewport().height():
+                break
+
+            line_number = block.blockNumber() + 1
+            line_nos.append(line_number)
+
+            block = block.next()
+
+        return line_nos
 
     def mousePressEvent(self, event: QMouseEvent):
         clicked_line_number = self._line_number_at(event.pos())
