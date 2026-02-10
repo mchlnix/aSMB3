@@ -36,7 +36,7 @@ _DEFAULT_VALUES: dict[AppSettingKeys, str | int | bool] = {
     AppSettingKeys.APP_SAVE_AUTOMATICALLY: False,
     AppSettingKeys.APP_START_MAXIMIZED: False,
     #
-    AppSettingKeys.ASSEMBLY_COMMAND: "nesasm.exe %f",
+    AppSettingKeys.ASSEMBLY_COMMAND: "nesasm.exe -l3 %f",
     AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS: True,
     #
     AppSettingKeys.EDITOR_CODE_FONT_BOLD: True,

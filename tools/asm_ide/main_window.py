@@ -155,6 +155,7 @@ class MainWindow(QMainWindow):
 
             # todo: just copy all files that have changed after assembly succeeded?
             rom_name = self._main_file_path.stem + ".nes"
+            fns_name = self._main_file_path.stem + ".fns"
 
             # call the compiler and capture it's output
             try:
@@ -179,6 +180,7 @@ class MainWindow(QMainWindow):
             else:
                 # copy back the compiled ROM
                 temp_rom_path = temp_path / rom_name
+                temp_fns_path = temp_path / fns_name
 
                 if not temp_rom_path.exists():
                     QMessageBox.critical(
@@ -187,6 +189,9 @@ class MainWindow(QMainWindow):
 
                 else:
                     shutil.copy(temp_rom_path, self._root_path / rom_name)
+
+                    if temp_fns_path.exists():
+                        shutil.copy(temp_fns_path, self._root_path / fns_name)
 
                     if AppSettings().value(AppSettingKeys.ASSEMBLY_NOTIFY_SUCCESS):
                         QMessageBox.information(
