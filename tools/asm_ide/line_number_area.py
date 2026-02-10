@@ -137,7 +137,7 @@ class LineNumberArea(QWidget):
         self._draw_line_number_with_background(painter, rect, line_number, _ERROR_BG_COLOR)
 
     def _draw_highlighted_line_number(self, painter, rect, line_number):
-        self._draw_line_number_with_background(line_number, painter, rect, _LINE_NO_COLOR)
+        self._draw_line_number_with_background(painter, rect, line_number, _LINE_NO_COLOR)
 
     def _draw_line_number_with_background(self, painter, rect, line_number, bg_color: QColor):
         painter.save()
